@@ -1,0 +1,7 @@
+node_modules/
+.firebase/
+*.log
+functions/game.html
+public/version.json
+sa.json
+*-service-account*.json

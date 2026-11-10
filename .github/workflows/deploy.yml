@@ -1,0 +1,48 @@
+name: Auf Firebase veröffentlichen
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: firebase-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+
+      - name: Version & Server-Spieldatei vorbereiten
+        run: node tools/version.js
+
+      - name: Server-Pakete installieren
+        working-directory: functions
+        run: npm ci --no-audit --no-fund
+
+      - name: Zugang zu Firebase
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$SA" ]; then echo "::error::Secret FIREBASE_SERVICE_ACCOUNT fehlt (Settings → Secrets and variables → Actions)"; exit 1; fi
+          printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/sa.json" >> "$GITHUB_ENV"
+
+      - name: Hochladen
+        run: npx -y firebase-tools@15 deploy --project azubi-survival --non-interactive --force
+
+      - name: Zugangsdatei löschen
+        if: always()
+        run: rm -f "$RUNNER_TEMP/sa.json"

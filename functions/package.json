@@ -1,0 +1,11 @@
+{
+  "name": "ueberleben-functions",
+  "private": true,
+  "main": "index.js",
+  "engines": { "node": "22" },
+  "dependencies": {
+    "firebase-admin": "^14.0.0",
+    "firebase-functions": "^7.0.0",
+    "jsdom": "^24.1.3"
+  }
+}
