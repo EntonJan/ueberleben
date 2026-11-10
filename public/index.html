@@ -381,6 +381,10 @@ body.mob{touch-action:manipulation;-webkit-user-select:none;user-select:none;-we
 .treesearch input:focus{border-color:var(--acc)}
 .treesearch #tqn{font-size:13px;background:var(--panel);padding:3px 6px;border:2px solid var(--ol)}
 .treesearch #tqn:empty{display:none}
+.cmpbox{margin-top:8px;padding-top:7px;border-top:2px dashed var(--line);font-size:14px;line-height:1.45}
+.cmphead{font-size:12.5px;margin-bottom:4px;opacity:.9}
+.cmpup{color:#3ee07a;font-weight:700}.cmpdn{color:#ff5c5c;font-weight:700}
+[data-th="island"] .cmpup{color:#11692f!important}[data-th="island"] .cmpdn{color:#a3121b!important}
 /* ===== Insel: Lesbarkeit ===== */
 [data-th="island"]{--mut:#5f4728}
 [data-th="island"] .mut{color:#5f4728}
@@ -410,7 +414,7 @@ body.mob{touch-action:manipulation;-webkit-user-select:none;user-select:none;-we
 'use strict';
 /* ================= Utils ================= */
 let R=Math.random;
-const GAME_VER='2026.11.10-suche1';
+const GAME_VER='2026.11.10-vergleich1';
 function seedRng(seed){let a=seed>>>0;R=function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 function unseedRng(){R=Math.random}
 const ri=(a,b)=>a+Math.floor(R()*(b-a+1));
@@ -1828,13 +1832,25 @@ function openBigMap(){if(!G||G.over||(G.modal&&G.modal!=='map'))return;if(G.moda
 function closeBigMap(){if(G&&G.modal==='map'){G.modal=null;$('#ovl').innerHTML=''}}
 function bar(v,max,col,label){const pct=Math.max(0,Math.min(100,v/max*100));return `<div class="bar"><i style="width:${pct}%;background:${col}"></i><span><em style="font-style:normal">${label}</em></span></div>`}
 const rarCls=it=>(it.kind==='eq'||it.kind==='jewel')&&it.rar?'r'+it.rar:'';
+
+/* ===== Item-Vergleich: verrechnete Gewinne (grün) und Verluste (rot) ===== */
+function cmpHTML(it){const ts=targetSlot(it);if(!ts)return '';const rep=[G.equip[ts]];if(isTwoHand(it)&&G.equip.off&&ts==='main')rep.push(G.equip.off);
+ const old=rep.filter(Boolean);const d={};const add=(m,f)=>{for(const k in (m||{}))d[k]=(d[k]||0)+f*m[k]};add(it.mods,1);old.forEach(o=>add(o.mods,-1));
+ const up=[],dn=[];for(const k in d){const v=Math.round(d[k]*100)/100;if(Math.abs(v)<0.005)continue;const l=modLine(k,Math.abs(v));(v>0?up:dn).push(v>0?l:'−'+l.slice(1))}
+ const sk=x=>(x.skills||[]);const newSk=sk(it),oldSk=old.flatMap(sk);
+ newSk.filter(k=>!oldSk.includes(k)).forEach(k=>up.push('Fähigkeit: '+ISK[k].n));oldSk.filter(k=>!newSk.includes(k)).forEach(k=>dn.push('Fähigkeit: '+ISK[k].n));
+ const so=old.reduce((a,o)=>a+(o.sockets||0),0),sn=it.sockets||0;if(sn>so)up.push(`+${sn-so} Juwelensockel`);if(sn<so)dn.push(`−${so-sn} Juwelensockel`);
+ const mwN=k=>(MW[k]||{}).n||k;if(it.mw&&!old.some(o=>o.mw===it.mw))up.push('⚒️ '+mwN(it.mw));old.forEach(o=>{if(o.mw&&o.mw!==it.mw)dn.push('⚒️ '+mwN(o.mw))});
+ const head=old.length?`Im Vergleich zu <b>${old.map(o=>esc(o.n)).join(' + ')}</b>${old.length>1?' <span class="mut">(beide werden abgelegt)</span>':''}`:`Slot <b>${SLOTL[ts]||'?'}</b> ist frei – alles ist Zugewinn`;
+ const ln=(a,c,ic)=>a.map(x=>`<div class="${c}">${ic} ${esc(x)}</div>`).join('');
+ return `<div class="cmpbox"><div class="cmphead">${head}</div>${up.length||dn.length?ln(up,'cmpup','▲')+ln(dn,'cmpdn','▼'):'<div class="mut">Keine Veränderung der Werte</div>'}</div>`}
 function itemDesc(it,shop){if(!it)return '';
  if(it.kind==='jewel')return `<b style="color:${RTX(it.rar)}">💎 Unbekanntes Juwel</b> <span class="mut">· ${RARN[it.rar]}</span><br>Kommt nach dem Run ins Lager und wird dort identifiziert (benötigt: ${SC.buildN.jewel}). Danach in Juwelensockel des Skillbaums einsetzbar.<br><span class="mut">Klicken: jetzt in ein Item mit freiem Slot setzen oder behalten.</span>`;
  if(it.kind==='use'){if(!isKnown(it))return `<b>${iIcon(it)} ${esc(iName(it))}</b><br><span class="mut">Unbekannt – benutzen, um es herauszufinden. Nicht alles ist gut für dich …</span>`;
   return `<b>${it.i} ${esc(it.n)}</b><br>${T(ITEMDESC[it.k])}${shop?'':'<br><span class="mut">Klicken zum Benutzen</span>'}`}
  if(it.unid)return `<b style="color:${RTX(it.rar)}">${it.i} ${esc(it.n)} ❔</b> <span class="mut">· ${RARN[it.rar]} · ${SLOTN[it.slot]} · Item-Level ${it.ilvl||'?'}</span><br><span class="mut">Nicht identifiziert – ausrüsten, um die Eigenschaften zu enthüllen.</span>`;
  normItem(it);const isEq=G&&!shop?SLOTS.some(x=>G.equip[x]===it):true;const ts=isEq?null:targetSlot(it);const cur=ts?G.equip[ts]:null;
- return `<b style="color:${RTX(it.rar)}">${it.i} ${esc(it.n)}</b> <span class="mut">· ${RARN[it.rar]} · ${SLOTN[it.slot]}${isTwoHand(it)?' (2H)':''}${it.ilvl?' · Item-Level '+it.ilvl:''}</span><br>${eqLines(it).join('<br>')}${!isEq&&cur?`<br><span class="mut">Ersetzt: ${esc(cur.n)} (${modLines(cur.mods).join(', ')||'–'})</span>`:''}${isEq||shop?'':'<br><span class="mut">Klicken zum Ausrüsten</span>'}`}
+ return `<b style="color:${RTX(it.rar)}">${it.i} ${esc(it.n)}</b> <span class="mut">· ${RARN[it.rar]} · ${SLOTN[it.slot]}${isTwoHand(it)?' (2H)':''}${it.ilvl?' · Item-Level '+it.ilvl:''}</span><br>${eqLines(it).join('<br>')}${!isEq&&ts?cmpHTML(it):''}${isEq||shop?'':'<br><span class="mut">Klicken zum Ausrüsten</span>'}`}
 function updatePanel(){
  if(G&&G.arena&&G.arena.replay)return;const side=$('#side');if(!side||!G)return;const p=G.p,S=G.S;
  const er=$('#earned');if(er)er.textContent=`${SC.goldI} ${G.gold} · ${SC.curI} ~${Math.round(G.earned*(1+S.metaFind/100)*(1+0.25*G.heat)*CUR_MULT)} · ☠️ ${G.kills}`;
