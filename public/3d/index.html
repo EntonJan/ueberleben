@@ -11,7 +11,7 @@
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;overflow:hidden;background:#0b0826;font-family:'Baloo 2',system-ui,sans-serif;color:var(--ink);touch-action:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
 #c{position:fixed;inset:0;width:100%;height:100%;display:block}
-.hud{position:fixed;left:calc(12px + env(safe-area-inset-left));top:calc(12px + env(safe-area-inset-top));right:calc(110px + env(safe-area-inset-right));display:flex;gap:8px;flex-wrap:wrap;z-index:5;pointer-events:none}
+.hud{position:fixed;left:calc(12px + env(safe-area-inset-left));top:calc(12px + env(safe-area-inset-top));right:calc(160px + env(safe-area-inset-right));display:flex;gap:8px;flex-wrap:wrap;z-index:5;pointer-events:none}
 @media (max-width:520px){.pill{font-size:15px;padding:4px 10px 2px}.btn{font-size:14px;padding:6px 11px 4px}}
 .pill{background:var(--card);border-radius:999px;padding:6px 14px 4px;font-weight:800;font-size:18px;box-shadow:0 4px 0 rgba(0,0,0,.25);display:flex;align-items:center;gap:6px}
 .pill .b{display:inline-block;width:16px;height:16px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff,#ffd23a 45%,#e59a00)}
@@ -41,16 +41,16 @@ body.touch .hint{display:none}
 <body>
 <canvas id="c"></canvas>
 <div class="hud"><div class="pill hearts" id="hp">❤❤❤❤❤</div><div class="pill"><span class="b"></span><span id="bits">0</span>/<span id="bitsT">0</span></div><div class="pill" id="foes">👾 0</div></div>
-<div class="topr"><button class="btn" id="bCam" title="Kamera drehen (Q/E)">⟲</button><button class="btn" id="bInfo">?</button></div>
+<div class="topr"><button class="btn" id="bCamL" title="Kamera nach links drehen (Q)">⟲</button><button class="btn" id="bCamR" title="Kamera nach rechts drehen (E)">⟳</button><button class="btn" id="bInfo">?</button></div>
 <div class="pad" id="pad"><button class="x"></button><button data-d="0,-1">▲</button><button class="x"></button><button data-d="-1,0">◀</button><button class="x"></button><button data-d="1,0">▶</button><button class="x"></button><button data-d="0,1">▼</button><button class="x"></button></div>
-<div class="hint">WASD / Pfeile laufen · in Gegner laufen = Angriff · Q/E Kamera · Mausrad Zoom</div>
+<div class="hint">WASD / Pfeile laufen · in Gegner laufen = Angriff · Maus ziehen = Kamera drehen & neigen · Q/E drehen · Mausrad Zoom · R Kamera zurück</div>
 <div class="toast" id="toast"></div>
 <div class="panel" id="intro"><div class="box">
  <span class="tag">3D-Testlevel</span>
  <h1>Sternenhafen</h1>
  <p>So könnte <b>Überleben!</b> als 3D-Abenteuer aussehen – im Spielzeug-Look mit Toon-Shading, inspiriert von Mario Galaxy.</p>
  <p>Sammle alle <b>Sternenteile</b>, besiege die wabbelnden <b>Bürokratie-Blobs</b> und hol dir den <b>Großen Stern</b> am Ende der Insel.</p>
- <p class="keys">PC: WASD/Pfeile · Q/E Kamera drehen · Mausrad zoomen<br>Handy: Steuerkreuz oder Wischen · zwei Finger zoomen</p>
+ <p class="keys">PC: WASD/Pfeile · Maus ziehen = Kamera drehen · Mausrad zoomen<br>Handy: Steuerkreuz oder Wischen · zwei Finger drehen & zoomen · ⟲ ⟳ Kamera</p>
  <button class="btn pri" id="go" style="font-size:20px;padding:10px 26px 8px;margin-top:6px">Los geht's ✨</button>
 </div></div>
 <div class="panel" id="err"><div class="box"><h1>3D nicht verfügbar</h1><p id="errT">Dein Gerät oder Browser unterstützt kein WebGL.</p></div></div>
@@ -190,9 +190,9 @@ updHud();
 let toastT=0;function toast(t){const e=$('toast');e.textContent=t;e.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>e.classList.remove('on'),1300)}
 
 /* ---------- Kamera ---------- */
-const camS={yaw:0,targetYaw:0,dist:innerWidth<innerHeight?19:13,pos:new THREE.Vector3()};
-function camDir(dx,dy){// Steuerung relativ zur Kamera
- const a=Math.round(camS.targetYaw/(Math.PI/2))&3;const r=[[dx,dy],[ -dy,dx],[-dx,-dy],[dy,-dx]][a];return r}
+const CAM0={pitch:.92,dist:innerWidth<innerHeight?19:13};const camS={yaw:0,targetYaw:0,pitch:CAM0.pitch,dist:CAM0.dist,pos:new THREE.Vector3()};const clampP=v=>Math.max(.32,Math.min(1.35,v));
+function camDir(dx,dy){// Steuerung relativ zur Kamera: Eingabe drehen und auf das Raster einrasten
+ const c=Math.cos(camS.yaw),s=Math.sin(camS.yaw);const wx=dx*c-dy*s,wz=dx*s+dy*c;return Math.abs(wx)>=Math.abs(wz)?[Math.sign(wx),0]:[0,Math.sign(wz)]}
 
 /* ---------- Bewegung (rundenbasiert wie im Spiel) ---------- */
 const STEP=.17;
@@ -218,18 +218,22 @@ function showEnd(ok){S.over=true;const p=$('intro');p.querySelector('.box').inne
 /* ---------- Eingabe ---------- */
 const KEYS={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0],w:[0,-1],s:[0,1],a:[-1,0],d:[1,0]};
 const held=new Set();
-addEventListener('keydown',e=>{const k=e.key.length===1?e.key.toLowerCase():e.key;if(KEYS[k]){held.add(k);e.preventDefault()}if(k==='q')camS.targetYaw+=Math.PI/2;if(k==='e')camS.targetYaw-=Math.PI/2});
+addEventListener('keydown',e=>{const k=e.key.length===1?e.key.toLowerCase():e.key;if(KEYS[k]){held.add(k);e.preventDefault()}if(k==='q')camS.targetYaw+=Math.PI/4;if(k==='e')camS.targetYaw-=Math.PI/4;if(k==='r'){camS.targetYaw=Math.round(camS.yaw/(Math.PI*2))*Math.PI*2;camS.pitch=CAM0.pitch;camS.dist=CAM0.dist}});
 addEventListener('keyup',e=>{const k=e.key.length===1?e.key.toLowerCase():e.key;held.delete(k)});
 addEventListener('wheel',e=>{camS.dist=Math.max(8,Math.min(26,camS.dist+e.deltaY*.01))},{passive:true});
-$('bCam').onclick=()=>camS.targetYaw+=Math.PI/2;
+$('bCamL').onclick=()=>camS.targetYaw+=Math.PI/4;$('bCamR').onclick=()=>camS.targetYaw-=Math.PI/4;
+// Maus ziehen = Kamera drehen/neigen
+let drag=null;$('c').addEventListener('pointerdown',e=>{if(e.pointerType==='touch')return;drag={x:e.clientX,y:e.clientY};$('c').setPointerCapture(e.pointerId);$('c').style.cursor='grabbing'});
+$('c').addEventListener('pointermove',e=>{if(!drag)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;drag={x:e.clientX,y:e.clientY};camS.yaw-=dx*.008;camS.targetYaw=camS.yaw;camS.pitch=clampP(camS.pitch+dy*.005)});
+['pointerup','pointercancel'].forEach(t=>$('c').addEventListener(t,()=>{drag=null;$('c').style.cursor='grab'}));$('c').style.cursor='grab';
 $('bInfo').onclick=()=>{$('intro').style.display='flex'};
 $('go').onclick=()=>{$('intro').style.display='none';S.started=true};
 let padDir=null;
 $('pad').addEventListener('pointerdown',e=>{const b=e.target.closest('[data-d]');if(!b)return;e.preventDefault();padDir=b.dataset.d.split(',').map(Number);b.classList.add('on')});
 ['pointerup','pointercancel','pointerleave'].forEach(t=>$('pad').addEventListener(t,()=>{padDir=null;document.querySelectorAll('.pad .on').forEach(b=>b.classList.remove('on'))}));
 let sw=null,pinch=null;
-$('c').addEventListener('touchstart',e=>{if(e.touches.length===2){const a=e.touches[0],b=e.touches[1];pinch={d:Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY),z:camS.dist};sw=null}else{const t=e.touches[0];sw={x:t.clientX,y:t.clientY}}},{passive:true});
-$('c').addEventListener('touchmove',e=>{if(pinch&&e.touches.length===2){const a=e.touches[0],b=e.touches[1];const d=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);camS.dist=Math.max(8,Math.min(26,pinch.z*pinch.d/d))}e.preventDefault()},{passive:false});
+$('c').addEventListener('touchstart',e=>{if(e.touches.length===2){const a=e.touches[0],b=e.touches[1];pinch={d:Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY),z:camS.dist,ang:Math.atan2(b.clientY-a.clientY,b.clientX-a.clientX),yaw:camS.yaw,my:(a.clientY+b.clientY)/2,p:camS.pitch};sw=null}else{const t=e.touches[0];sw={x:t.clientX,y:t.clientY}}},{passive:true});
+$('c').addEventListener('touchmove',e=>{if(pinch&&e.touches.length===2){const a=e.touches[0],b=e.touches[1];const d=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);camS.dist=Math.max(8,Math.min(26,pinch.z*pinch.d/d));const ang=Math.atan2(b.clientY-a.clientY,b.clientX-a.clientX);camS.yaw=pinch.yaw-(ang-pinch.ang);camS.targetYaw=camS.yaw;camS.pitch=clampP(pinch.p+((a.clientY+b.clientY)/2-pinch.my)*.006)}e.preventDefault()},{passive:false});
 $('c').addEventListener('touchend',e=>{if(pinch&&e.touches.length<2){pinch=null;return}if(!sw)return;const t=e.changedTouches[0];const dx=t.clientX-sw.x,dy=t.clientY-sw.y;sw=null;if(Math.hypot(dx,dy)<30)return;Math.abs(dx)>Math.abs(dy)?tryMove(Math.sign(dx),0):tryMove(0,Math.sign(dy))},{passive:true});
 function inputDir(){if(padDir)return padDir;for(const k of held)if(KEYS[k])return KEYS[k];return null}
 
@@ -267,7 +271,7 @@ function frame(){requestAnimationFrame(frame);const dt=Math.min(.05,clock.getDel
  for(let i=parts.length-1;i>=0;i--){const m=parts[i],u=m.userData;u.t+=dt;if(u.t>=u.life){scene.remove(m);m.material.dispose();parts.splice(i,1);continue}u.v.y-=u.grav*dt;m.position.addScaledVector(u.v,dt);m.rotation.x+=dt*6;m.rotation.y+=dt*5;const k=u.t/u.life;m.material.opacity=1-k;if(u.grow)m.scale.setScalar(1+k*1.5)}
  // Kamera folgt weich
  camS.yaw+=(camS.targetYaw-camS.yaw)*Math.min(1,dt*6);const tgt=hero.position.clone();tgt.y=0;
- const off=new THREE.Vector3(Math.sin(camS.yaw)*camS.dist*.62,camS.dist*.82,Math.cos(camS.yaw)*camS.dist*.62);
+ const hz=Math.cos(camS.pitch)*camS.dist;const off=new THREE.Vector3(Math.sin(camS.yaw)*hz,Math.sin(camS.pitch)*camS.dist,Math.cos(camS.yaw)*hz);
  camS.pos.lerp(tgt.clone().add(off),Math.min(1,dt*5));if(!camS.init){camS.pos.copy(tgt.clone().add(off));camS.init=1}
  camera.position.copy(camS.pos);camera.lookAt(tgt.x,tgt.y+.6,tgt.z);
  sun.position.set(tgt.x+14,26,tgt.z+10);sun.target.position.copy(tgt);
