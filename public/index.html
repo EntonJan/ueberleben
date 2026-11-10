@@ -900,7 +900,7 @@ function updateNInfo(){const box=$('#ninfo');if(!box)return;const n=TV.hover||TV
 function updateTreeSum(){const box=$('#tsum');if(!box)return;const {m,f}=treeMods(scS());const lines=modLines(m);Object.keys(f).forEach(fl=>{const i=KS.findIndex(k=>k.f===fl);lines.push('🔷 '+SC.keystones[i]+': '+T(KS[i].d))});box.innerHTML=lines.length?lines.map(l=>esc(l)).join('<br>'):'<span class="mut">Noch nichts gelernt.</span>'}
 function drawTree(){
  const cv=$('#tcv');if(!cv)return;const ctx=cv.getContext('2d');const dpr=window.devicePixelRatio||1;const W=cv.width/dpr,H=cv.height/dpr;
- ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);const LT=document.body.dataset.th==='island';const TP=LT?{e0:'#b8995e',e1:'#9a6a14',e2:'#127566',e3:'#8a6a38',off:'#efdeb4',hi:'#3b2812',sock:'#6b4a22',lab:'99'}:{e0:'#2c2f40',e1:'#e8d48a',e2:TP.e2,e3:'#5d6280',off:TP.off,hi:TP.hi,sock:TP.sock,lab:'66'};
+ ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);const LT=document.body.dataset.th==='island';const TP=LT?{e0:'#b8995e',e1:'#9a6a14',e2:'#127566',e3:'#8a6a38',off:'#efdeb4',hi:'#3b2812',sock:'#6b4a22',lab:'99'}:{e0:'#2c2f40',e1:'#e8d48a',e2:'#7fe3ff',e3:'#5d6280',off:'#1b1d2a',hi:'#ffffff',sock:'#cfd3ff',lab:'66'};
  ctx.translate(W/2+TV.x,H/2+TV.y);ctx.scale(TV.z,TV.z);
  const A=allocSet();const avail=new Set();A.forEach(a=>TREE.adj[a].forEach(nb=>{if(!A.has(nb))avail.add(nb)}));
  const P=new Set(TV.path||[]);
