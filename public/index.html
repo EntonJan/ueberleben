@@ -131,6 +131,7 @@ textarea{width:100%;min-height:80px;background:var(--panel2);color:var(--txt);bo
 .shoprow{display:flex;gap:8px;align-items:center;background:var(--panel2);border-radius:8px;padding:6px 8px;margin-bottom:6px;font-size:12px}
 .sic{font-size:26px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;border:1px solid transparent;border-radius:6px;flex:none}
 .sinfo{flex:1;line-height:1.4}
+.shopinv{grid-template-columns:repeat(auto-fill,minmax(54px,1fr))}.slot .spr{position:absolute;bottom:1px;left:0;right:0;text-align:center;font-size:10px;color:#ffd24a;text-shadow:0 1px 0 #000;pointer-events:none}.shoprow[data-hov]{cursor:help}
 .fchips{display:flex;flex-wrap:wrap;gap:4px}.fchip{background:var(--panel2);border-radius:6px;padding:3px 7px;font-size:12px}.fchip.dz{background:#4a1f2e}.fchip.bz{outline:1px solid var(--gold)}
 .relgrid{display:flex;flex-wrap:wrap;gap:6px}.relc{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:12.5px;text-align:left;line-height:1.4}.relc.on{border-color:var(--gold);box-shadow:0 0 0 2px #ffd24a33}
 .jw{background:var(--panel2);border-radius:8px;padding:8px;margin-top:6px;font-size:12.5px;line-height:1.5}
@@ -439,7 +440,7 @@ body.r3on .bfx,body.r3on #bfx{display:none}
 'use strict';
 /* ================= Utils ================= */
 let R=Math.random;
-const GAME_VER='2026.11.10-garten6';
+const GAME_VER='2026.11.10-shop1';
 function seedRng(seed){let a=seed>>>0;R=function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 function unseedRng(){R=Math.random}
 const ri=(a,b)=>a+Math.floor(R()*(b-a+1));
@@ -1300,12 +1301,15 @@ function genStock(){const n=scS().build.shop;const st=[];const ks=['heal','res',
  st.forEach(it=>{it.price=it.kind==='use'?Math.max(1,Math.round(((it.k==='heal'?14:12)+G.floor*2)*(1-0.1*n))):price(it)});return st}
 function openShop(){G.modal='shop';G.walking=false;renderShop()}
 function renderShop(){const m=G.merchant;if(!m)return;const full=G.inv.length>=INV;
- const row=(it,btn)=>`<div class="shoprow"><span class="sic ${rarCls(it)}">${pxImg(iIcon(it),36)}</span><div class="sinfo">${itemDesc(it,true)}</div>${btn}</div>`;
+ const sc=[...document.querySelectorAll('#ovl .box,#ovl .shopcol')].map(e=>e.scrollTop);hideTip();
+ const row=(it,btn,i)=>`<div class="shoprow" data-hov="shop:${i}"><span class="sic ${rarCls(it)}">${pxImg(iIcon(it),36)}</span><div class="sinfo">${itemDesc(it,true)}</div>${btn}</div>`;
+ const sellGrid=G.inv.length?`<div class="inv shopinv">${Array.from({length:Math.max(INV,G.inv.length)},(_,i)=>{const it=G.inv[i];return it?`<button class="slot ${rarCls(it)}" data-a="sell" data-v="${i}" data-hov="inv:${i}">${pxImg(iIcon(it),34)}${it.unid||!isKnown(it)||it.kind==='jewel'?'<b class="qm">?</b>':''}<span class="spr">+${sellPrice(it)}</span></button>`:'<div class="slot"></div>'}).join('')}</div><div class="mut" style="font-size:11px;margin-top:6px">${isMob()?'Antippen = Infos & Vergleich, nochmal antippen = verkaufen.':'Klick = verkaufen · Maus drüber = Infos & Vergleich mit deiner Ausrüstung.'}</div>`:'<div class="mut">Inventar leer.</div>';
  $('#ovl').innerHTML=`<div class="ov"><div class="box" style="max-width:760px"><div class="row" style="justify-content:space-between"><h2 style="margin:0">${SC.merchant.i} ${SC.merchant.n}</h2><b class="gold">${SC.goldI} ${G.gold} ${SC.gold}</b></div>
- <div class="grid2" style="margin-top:12px"><div><div class="lbl">Angebot</div>${m.stock.length?m.stock.map((it,i)=>row(it,`<button class="btn sm" data-a="buy" data-v="${i}" ${G.gold<it.price||full?'disabled':''}>${it.price} ${SC.goldI}</button>`)).join(''):'<div class="mut">Ausverkauft.</div>'}</div>
- <div><div class="lbl">Verkaufen</div>${G.inv.length?G.inv.map((it,i)=>row(it,`<button class="btn sm" data-a="sell" data-v="${i}">+${sellPrice(it)} ${SC.goldI}</button>`)).join(''):'<div class="mut">Inventar leer.</div>'}</div></div>
+ <div class="grid2" style="margin-top:12px"><div><div class="lbl">Angebot</div>${m.stock.length?m.stock.map((it,i)=>row(it,`<button class="btn sm" data-a="buy" data-v="${i}" ${G.gold<it.price||full?'disabled':''}>${it.price} ${SC.goldI}</button>`,i)).join(''):'<div class="mut">Ausverkauft.</div>'}</div>
+ <div class="shopcol"><div class="lbl">Verkaufen <span class="mut">· ${G.inv.length}/${INV}</span></div>${sellGrid}</div></div>
  ${!m.gs?'':m.gsUsed?`<div class="card" style="margin-top:12px;background:var(--panel2)"><b>⚒️ Goldschmied</b> <span class="mut">– hat deinen Auftrag erledigt und packt zusammen. Ein weiteres Stück schmiedet er heute nicht.</span></div>`:`<div class="card" style="margin-top:12px;background:var(--panel2)"><b>⚒️ Goldschmied</b> <span class="gold">· heute zu Gast, nur 1 Auftrag!</span> <span class="mut">– gibt dein <b>gesamtes</b> Gold ab (mind. 25 ${SC.goldI}) und schmiedet dir unbeobachtet ein Item. Je mehr Gold im Verhältnis zu deinem Level, desto stärker. Wähle den Slot:</span><div class="row" style="margin-top:8px">${Object.keys(ITYPES).map(s=>`<button class="btn sm ${G.gold>=25?'pri':''}" data-a="gsmith" data-v="${s}" ${G.gold<25?'disabled':''}>${ITYPES[s].n}</button>`).join('')}</div></div>`}
- <div class="row" style="justify-content:flex-end;margin-top:12px">${full?'<span class="bad" style="font-size:12px">Inventar voll</span>':''}<button class="btn pri" data-a="closeShop">Fertig [Esc]</button></div></div></div>`}
+ <div class="row" style="justify-content:flex-end;margin-top:12px">${full?'<span class="bad" style="font-size:12px">Inventar voll</span>':''}<button class="btn pri" data-a="closeShop">Fertig [Esc]</button></div></div></div>`;
+ [...document.querySelectorAll('#ovl .box,#ovl .shopcol')].forEach((e,k)=>{if(sc[k])e.scrollTop=sc[k]})}
 function buyItem(i){const it=G.merchant.stock[i];if(!it||G.gold<it.price||G.inv.length>=INV){sfx('error');return}G.gold-=it.price;sfx('buy');G.merchant.stock.splice(i,1);if(it.kind==='use')G.known[it.k]=1;delete it.price;G.inv.push(it);G.rs.items++;log(`Gekauft: ${iIcon(it)} ${iName(it)}`,'loot');renderShop();updatePanel()}
 function sellItem(i){const it=G.inv[i];if(!it)return;const p=sellPrice(it);G.gold+=p;G.inv.splice(i,1);log(`Verkauft: ${iIcon(it)} ${iName(it)} (+${p} ${SC.goldI})`,'loot');renderShop();updatePanel()}
 function closeShop(){if(G&&G.modal==='shop'){G.modal=null;$('#ovl').innerHTML='';updatePanel()}}
@@ -1917,13 +1921,13 @@ function cmpHTML(it){const ts=targetSlot(it);if(!ts)return '';const rep=[G.equip
  const head=old.length?`Im Vergleich zu <b>${old.map(o=>esc(o.n)).join(' + ')}</b>${old.length>1?' <span class="mut">(beide werden abgelegt)</span>':''}`:`Slot <b>${SLOTL[ts]||'?'}</b> ist frei – alles ist Zugewinn`;
  const ln=(a,c,ic)=>a.map(x=>`<div class="${c}">${ic} ${esc(x)}</div>`).join('');
  return `<div class="cmpbox"><div class="cmphead">${head}</div>${up.length||dn.length?ln(up,'cmpup','▲')+ln(dn,'cmpdn','▼'):'<div class="mut">Keine Veränderung der Werte</div>'}</div>`}
-function itemDesc(it,shop){if(!it)return '';
+function itemDesc(it,shop,cmp){if(!it)return '';
  if(it.kind==='jewel')return `<b style="color:${RTX(it.rar)}">💎 Unbekanntes Juwel</b> <span class="mut">· ${RARN[it.rar]}</span><br>Kommt nach dem Run ins Lager und wird dort identifiziert (benötigt: ${SC.buildN.jewel}). Danach in Juwelensockel des Skillbaums einsetzbar.<br><span class="mut">Klicken: jetzt in ein Item mit freiem Slot setzen oder behalten.</span>`;
  if(it.kind==='use'){if(!isKnown(it))return `<b>${iIcon(it)} ${esc(iName(it))}</b><br><span class="mut">Unbekannt – benutzen, um es herauszufinden. Nicht alles ist gut für dich …</span>`;
   return `<b>${it.i} ${esc(it.n)}</b><br>${T(ITEMDESC[it.k])}${shop?'':'<br><span class="mut">Klicken zum Benutzen</span>'}`}
  if(it.unid)return `<b style="color:${RTX(it.rar)}">${it.i} ${esc(it.n)} ❔</b> <span class="mut">· ${RARN[it.rar]} · ${SLOTN[it.slot]} · Item-Level ${it.ilvl||'?'}</span><br><span class="mut">Nicht identifiziert – ausrüsten, um die Eigenschaften zu enthüllen.</span>`;
- normItem(it);const isEq=G&&!shop?SLOTS.some(x=>G.equip[x]===it):true;const ts=isEq?null:targetSlot(it);const cur=ts?G.equip[ts]:null;
- return `<b style="color:${RTX(it.rar)}">${it.i} ${esc(it.n)}</b> <span class="mut">· ${RARN[it.rar]} · ${SLOTN[it.slot]}${isTwoHand(it)?' (2H)':''}${it.ilvl?' · Item-Level '+it.ilvl:''}</span><br>${eqLines(it).join('<br>')}${!isEq&&ts?cmpHTML(it):''}${isEq||shop?'':'<br><span class="mut">Klicken zum Ausrüsten</span>'}`}
+ normItem(it);const isEq=G&&(!shop||cmp)?SLOTS.some(x=>G.equip[x]===it):true;const ts=isEq?null:targetSlot(it);const cur=ts?G.equip[ts]:null;
+ return `<b style="color:${RTX(it.rar)}">${it.i} ${esc(it.n)}</b> <span class="mut">· ${RARN[it.rar]} · ${SLOTN[it.slot]}${isTwoHand(it)?' (2H)':''}${it.ilvl?' · Item-Level '+it.ilvl:''}</span><br>${eqLines(it).join('<br>')}${!isEq&&ts?cmpHTML(it):''}${isEq||shop||(G&&G.modal==='shop')?'':'<br><span class="mut">Klicken zum Ausrüsten</span>'}`}
 function updatePanel(){
  if(G&&G.arena&&G.arena.replay)return;const side=$('#side');if(!side||!G)return;const p=G.p,S=G.S;
  const er=$('#earned');if(er)er.textContent=`${SC.goldI} ${G.gold} · ${SC.curI} ~${Math.round(G.earned*(1+S.metaFind/100)*(1+0.25*G.heat)*CUR_MULT)} · ☠️ ${G.kills}`;
@@ -1948,7 +1952,7 @@ function updatePanel(){
  const lg=$('#log');if(lg)lg.scrollTop=lg.scrollHeight;drawMap($('#mini'),6);if(G.modal==='char')renderChar();updateMob();
 }
 function tipFor(h){const [t,v]=h.dataset.hov.split(':');if(SC&&(t==='ars'||t==='ch')){const d=scS();const it=t==='ars'?(d.arsenal||[])[+v]:arsItem(d,(d.champ||{eq:{}}).eq[v]);return it?itemDesc(it,true):''}
- if(t==='arl'&&G&&G.arsList){const it=G.arsList[+v];return it?itemDesc(it,true):''}if(!G)return '';const it=t==='inv'?G.inv[+v]:G.equip[v];return it?itemDesc(it):''}
+ if(t==='arl'&&G&&G.arsList){const it=G.arsList[+v];return it?itemDesc(it,true):''}if(!G)return '';if(t==='shop'){const it=G.merchant&&G.merchant.stock[+v];return it?itemDesc(it,true,true):''}const it=t==='inv'?G.inv[+v]:G.equip[v];return it?itemDesc(it):''}
 function hideTip(){const t=$('#tip');if(t)t.style.display='none'}
 function moveTip(e,html){const t=$('#tip');if(!t)return;if(html!==undefined){if(!html){hideTip();return}t.innerHTML=html;t.style.display='block'}
  const W=window.innerWidth,H=window.innerHeight,r=t.getBoundingClientRect();let x=e.clientX+18,y=e.clientY+14;if(x+r.width>W-8)x=e.clientX-r.width-14;if(y+r.height>H-8)y=Math.max(8,H-r.height-8);t.style.left=x+'px';t.style.top=y+'px'}
