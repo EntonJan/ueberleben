@@ -414,7 +414,7 @@ body.mob{touch-action:manipulation;-webkit-user-select:none;user-select:none;-we
 'use strict';
 /* ================= Utils ================= */
 let R=Math.random;
-const GAME_VER='2026.11.10-vergleich1';
+const GAME_VER='2026.11.10-endlos1';
 function seedRng(seed){let a=seed>>>0;R=function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 function unseedRng(){R=Math.random}
 const ri=(a,b)=>a+Math.floor(R()*(b-a+1));
@@ -830,7 +830,7 @@ function runTabHTML(){
  <div class="card"><b>${SC.heat}</b> <span class="mut">– je Stufe +20% Gegnerstärke und +25% ${SC.cur}. Neue Stufe nach einem Sieg auf der höchsten.</span>
  <div class="heatrow">${heat}${d.heatMax<5?`<span class="mut" style="font-size:12px">🔒 Stufe ${d.heatMax+1}</span>`:''}</div>
  ${d.run?'<button class="btn" disabled style="font-size:15px;padding:12px 20px">⏸️ Erst gespeicherten Run fortsetzen oder aufgeben</button>':`<button class="btn pri" data-a="start" style="font-size:16px;padding:12px 26px">Los geht's ${SC.classes[APP.cls].i}</button>`}
- <div class="hint" style="margin-top:12px">Steuerung: Pfeiltasten/WASD (Diagonalen: Q E Y/Z X oder Numpad) · C = Charakter & Inventar · Leertaste = warten · 1/2/3 = Fähigkeiten · Enter = Abgang benutzen · M = Karte · Händler: hineinlaufen · Klick auf ein Feld = hinlaufen · Rechtsklick auf Item = wegwerfen.<br>Dein Run wird automatisch gesichert – über ⚙️ Optionen (O / Esc) kannst du ihn pausieren und später fortsetzen.</div></div>`;
+ <div class="hint" style="margin-top:12px">Steuerung: Pfeiltasten/WASD (Diagonalen: Q E Y/Z X oder Numpad) · C = Charakter & Inventar · Leertaste = warten · 1/2/3 = Fähigkeiten · Enter = Abgang benutzen · M = Karte · Händler: hineinlaufen · Klick auf ein Feld = hinlaufen.<br>Dein Run wird automatisch gesichert – über ⚙️ Optionen (O / Esc) kannst du ihn pausieren und später fortsetzen.</div></div>`;
 }
 function statsTabHTML(){return statsTabHTML0()+historyHTML()}
 function statsTabHTML0(){
@@ -1167,6 +1167,9 @@ function computeStats(){if(G.fixedS)return;
  G.S=S;G.p.hp=Math.min(G.p.hp,S.maxHp);G.p.res=Math.min(G.p.res,S.maxRes);
 }
 const tierIdx=()=>Math.min(2,Math.floor((G.floor-1)/5));
+const ENDLESS_STEP=1.5; // jede Etage nach 15 ist 50% schwerer als die vorherige
+const endlessMul=()=>G&&G.floor>15?Math.pow(ENDLESS_STEP,G.floor-15):1;
+const flTxt=f=>f>15?`${f} ♾️`:`${f}/15`;
 const passable=(x,y)=>x>=0&&y>=0&&x<G.w&&y<G.h&&G.map[y*G.w+x]===0;
 const enemyAt=(x,y)=>G.enemies.find(e=>e.x===x&&e.y===y&&!e.dead);
 const itemAt=(x,y)=>G.items.find(i=>i.x===x&&i.y===y);
@@ -1190,13 +1193,13 @@ function genFloor(){
  const byDist=rooms.filter(r=>r!==start).map(r=>({r,v:dm[r.cy*W+r.cx]})).filter(o=>o.v>0).sort((a,b)=>b.v-a.v);
  const far=byDist.length?byDist[0].r:rooms[rooms.length-1];G.stairs={x:far.cx,y:far.cy};
  const boss=G.floor%5===0;
- if(!boss&&G.floor<15&&byDist.length>2){const alt=byDist[1].r;G.stairs2={x:alt.cx,y:alt.cy}}
+ if(!boss&&(G.floor<15||G.endless)&&byDist.length>2){const alt=byDist[1].r;G.stairs2={x:alt.cx,y:alt.cy}}
  const randIn=(room)=>{for(let k=0;k<60;k++){const x=ri(room.x,room.x+room.w-1),y=ri(room.y,room.y+room.h-1);if(!occupied(x,y))return {x,y}}return null};
  const others=rooms.filter(r=>r!==start);
- const dz=G.danger?1.3:1;const scale=(1+0.07*(G.floor-1))*(1+0.2*G.heat)*dz;const dsc=(1+0.06*(G.floor-1)+0.2*G.heat)*dz;const hm=1+0.2*G.heat;
+ const dz=G.danger?1.3:1;const em=endlessMul();const scale=(1+0.07*(G.floor-1))*(1+0.2*G.heat)*dz*em;const dsc=(1+0.06*(G.floor-1)+0.2*G.heat)*dz*em;const hm=(1+0.2*G.heat)*em;
  const ti=tierIdx();G.tier=SC.tiers[ti];G.bossAlive=false;
  G.rs.floors.push({f:G.floor,danger:G.danger,kills:0,boss});
- if(boss){const bi=G.floor/5-1;G.bossIdx=bi;const pos=randIn(far)||{x:far.cx+1,y:far.cy};const sn=G.ghost&&G.ghost.snaps&&G.ghost.snaps[G.floor];
+ if(boss){const bi=Math.min(2,G.floor/5-1);G.bossIdx=bi;const pos=randIn(far)||{x:far.cx+1,y:far.cy};const sn=G.ghost&&G.ghost.snaps&&G.ghost.snaps[G.floor];
   G.enemies.push(sn?mkGhost(sn,pos.x,pos.y,bi):mkEnemy(SC.bosses[bi],pos.x,pos.y,hm,hm));G.bossAlive=true;G.isGhostFloor=!!sn}
  if(!boss&&R()<.45){const cand=others.filter(r=>r!==far);const mr=cand.length?pick(cand):pick(others);const pos=randIn(mr);if(pos)G.merchant={x:pos.x,y:pos.y,stock:genStock(),gs:R()<GS_CHANCE,gsUsed:false}}
  const cnt=Math.min(30,Math.round((4+Math.floor(G.floor*0.9)+ri(0,3))*(G.danger?1.4:1)));
@@ -1407,7 +1410,7 @@ function snapChar(){const S=G.S;return {lvl:G.p.lvl,ci:G.ci,icon:G.cls.i,cn:G.cl
 function descend(){
  if(!G||G.over||G.modal||G.battle)return;const p=G.p;const s1=onStairs(G.stairs,p.x,p.y),s2=onStairs(G.stairs2,p.x,p.y);if(!s1&&!s2)return;
  if(s1&&G.bossAlive){log('🔒 Erst den Boss besiegen!','bad');updatePanel();return}
- if(s1&&G.floor>=15)return endRun(true);sfx('stairs');
+ if(s1&&G.floor>=15&&!G.endless){endlessAsk();return}sfx('stairs');
  G.earned+=(3+G.floor)*(G.danger?1.5:1);G.floor++;G.danger=s2;G.p.poison=[];
  if(G.floor%5===0)G.snaps[G.floor]=snapChar();
  genFloor();
@@ -1480,7 +1483,7 @@ function die(){if(G.over)return;if(G.arena){arenaResult(false);return}
  if(G.rflags.phoenix&&!G.phoenixUsed){G.phoenixUsed=true;G.p.hp=G.S.maxHp*.4;G.p.poison=[];float(G.p.x,G.p.y,'🔥 Wiedergeburt','#ffd24a');log(`${SC.relics[6][1]} ${SC.relics[6][0]} rettet dich – du stehst wieder auf!`,'good');return}
  log(SC.lose,'bad');endRun(false)}
 function endRun(win){
- if(G.over)return;G.over=true;G.modal='end';jingle(win?'victory':'death');
+ if(G.over)return;win=win||!!G.won;G.over=true;G.modal='end';jingle(win?'victory':'death');
  const d=scS(),st=d.stats,hm=1+0.25*G.heat;
  const base=G.earned*(1+G.S.metaFind/100)*hm*CUR_MULT;const winB=win?150*hm*CUR_MULT:0;const total=Math.round(base+winB);
  runClear();d.cur+=total;st.runs++;st.kills+=G.kills;if(win)st.wins++;
@@ -1635,7 +1638,7 @@ function renderChar(){const p=G.p;
   <div class="chargrid"><div class="ccol"><h3>📊 Werte</h3>${statRows()}<div class="lbl" style="margin-top:8px">Aktive Effekte</div>${effectsHTML()}</div>
   <div class="ccol"><h3>🛡️ Ausrüstung</h3><div class="doll">${SLOTS.map(slotCell).join('')}</div><div class="hint" style="margin-top:6px">Anklicken = ablegen</div></div>
   <div class="ccol ${APP.trash?'trash':''}"><div class="row" style="justify-content:space-between;margin-bottom:8px"><h3 style="margin:0">🎒 Inventar ${G.inv.length}/${INV}</h3><button class="btn sm" data-a="trash" style="${APP.trash?'border-color:#ff6b6b;color:#ff8f8f':''}">🗑️ ${APP.trash?'Wegwerfen aktiv':'Wegwerfen'}</button></div>
-   <div class="inv cinv">${invCells()}</div><div class="hint" style="margin-top:6px">Klick = benutzen / ausrüsten · Rechtsklick = wegwerfen · Juwel anklicken = einsetzen</div></div></div></div></div>`}
+   <div class="inv cinv">${invCells()}</div><div class="hint" style="margin-top:6px">Klick = benutzen / ausrüsten · Wegwerfen über den Button oben · Juwel anklicken = einsetzen</div></div></div></div></div>`}
 function toggleChar(){if(!G||G.over)return;hideTip();if(G.modal==='char'){G.modal=null;$('#ovl').innerHTML='';updatePanel();return}if(G.modal)return;G.modal='char';G.walking=false;renderChar()}
 /* ================= Arena (asynchrones PvP) ================= */
 const ARENA={list:null,loading:false,err:'',opps:null,me:null};
@@ -1773,7 +1776,7 @@ function renderGameShell(){
  new ResizeObserver(resizeCv).observe($('#cvw'));
  cv.addEventListener('click',onCvClick);mobBind();
 }
-function renderTop(){const t=$('#gtop');if(!t)return;if(G.arena){t.innerHTML=`<span class="fl">🏟️ Arena · gegen ${esc(G.arena.op.name)} (${G.arena.op.rating})</span><span style="flex:1"></span><button class="btn sm" data-a="giveup">Aufgeben</button>`;return}t.innerHTML=`<span class="fl">${SC.icon} ${SC.fw} ${G.floor}/15 · ${G.tier?G.tier.name:''}</span>${G.heat?`<span class="mut">🔥 ${SC.heat} ${G.heat}</span>`:''}<span class="mut" id="earned"></span><span style="flex:1"></span>${optBtn()}<button class="btn sm" data-a="giveup">Aufgeben</button>`}
+function renderTop(){const t=$('#gtop');if(!t)return;if(G.arena){t.innerHTML=`<span class="fl">🏟️ Arena · gegen ${esc(G.arena.op.name)} (${G.arena.op.rating})</span><span style="flex:1"></span><button class="btn sm" data-a="giveup">Aufgeben</button>`;return}t.innerHTML=`<span class="fl">${SC.icon} ${SC.fw} ${flTxt(G.floor)}${G.floor>15?` <span class="bad">×${fmtN(Math.round(endlessMul()*100)/100)}</span>`:''} · ${G.tier?G.tier.name:''}</span>${G.heat?`<span class="mut">🔥 ${SC.heat} ${G.heat}</span>`:''}<span class="mut" id="earned"></span><span style="flex:1"></span>${optBtn()}<button class="btn sm" data-a="giveup">Aufgeben</button>`}
 let VZ=1;
 function resizeCv(){const cw=$('#cvw');if(!cv||!cw||!cv.isConnected)return;const r=cw.getBoundingClientRect(),dpr=window.devicePixelRatio||1;VZ=isMob()?Math.max(.5,Math.min(1,Math.min(r.width,r.height*1.15)/(TS*9.5))):1;cv.width=Math.max(1,r.width*dpr);cv.height=Math.max(1,r.height*dpr);render()}
 function camera(){const dpr=window.devicePixelRatio||1;const W=cv.width/dpr/VZ,H=cv.height/dpr/VZ;let cx=G.p.x*TS+TS/2-W/2,cy=G.p.y*TS+TS/2-H/2;
@@ -1864,7 +1867,7 @@ function updatePanel(){
  ${buffs?`<div class="buffs">${buffs}</div>`:''}
  <div class="sg"><span>⚔️ Schaden <b>${S.min}–${S.max}</b></span><span>🛡️ Rüstung <b>${S.armor}</b></span><span>🎯 Krit <b>${fmtN(S.crit)}% ×${(S.critMulti/100).toFixed(2)}</b></span><span>⏱️ Agilität <b>${fmtN(S.agi)}s</b></span><span>💨 Ausweichen <b>${fmtN(S.dodge)}%</b></span>${S.parry?`<span>🤺 Parieren <b>${fmtN(S.parry)}%</b></span>`:''}${S.block?`<span>🛡️ Blocken <b>${fmtN(S.block)}%</b></span>`:''}${S.lifesteal?`<span>🩸 Lebensraub <b>${fmtN(S.lifesteal)}%</b></span>`:''}${S.dbl?`<span>⚔️ Doppelschlag <b>${fmtN(S.dbl)}%</b></span>`:''}${S.thorns?`<span>🌵 Dornen <b>${fmtN(S.thorns)}</b></span>`:''}</div>
  ${G.relics.length?`<div><div class="lbl">Relikte</div><div class="buffs">${G.relics.map(i=>`<span title="${esc(SC.relics[i][0]+': '+T(RELFX[i].d))}">${pxImg(SC.relics[i][1],27)}</span>`).join('')}</div></div>`:''}
- ${on1?`<button class="btn pri stairsbtn" data-a="descend" ${G.bossAlive?'disabled':''}>${SC.stairs} ${G.floor>=15?'Zum Ziel!':'Weiter zu '+SC.fw+' '+(G.floor+1)} ${G.bossAlive?'(Boss lebt)':''}</button>`:''}
+ ${on1?`<button class="btn pri stairsbtn" data-a="descend" ${G.bossAlive?'disabled':''}>${SC.stairs} ${G.floor>=15&&!G.endless?'Zum Ziel!':'Weiter zu '+SC.fw+' '+(G.floor+1)+(G.floor>=15?' ♾️':'')} ${G.bossAlive?'(Boss lebt)':''}</button>`:''}
  ${on2?`<button class="btn stairsbtn" style="border-color:#b04a6a;background:#3a1a28" data-a="descend">${SC.danger.i} ${SC.danger.n} → ${SC.fw} ${G.floor+1} ☠️ gefährlich</button>`:''}
  <div><div class="lbl">Fähigkeiten</div><div class="abils">${G.cls.ab.map((a,i)=>{const c=abCost(a);return `<button class="ab" data-a="ab" data-v="${i}" ${p.res<c?'disabled':''} title="${esc(T(ABIL[a.k].d))}"><div class="k">[${i+1}] · ${c} ${SC.res}</div>${esc(a.n)}</button>`}).join('')}</div></div>
  <div><div class="lbl">Schnellzugriff <span class="mut">· Verbrauchsgüter</span></div><div class="quick">${G.inv.map((it,i)=>it.kind==='use'?`<button class="slot" data-a="inv" data-v="${i}" data-hov="inv:${i}">${pxImg(iIcon(it),30)}${!isKnown(it)?'<b class="qm">?</b>':''}</button>`:'').join('')||'<span class="mut" style="font-size:12px">Keine Verbrauchsgüter.</span>'}</div></div>
@@ -1882,7 +1885,7 @@ function moveTip(e,html){const t=$('#tip');if(!t)return;if(html!==undefined){if(
 document.addEventListener('mouseover',e=>{const h=e.target.closest('[data-hov]');if(!h){hideTip();return}moveTip(e,tipFor(h))});
 document.addEventListener('mousemove',e=>{const t=$('#tip');if(!t||t.style.display!=='block')return;if(!e.target.closest('[data-hov]')){hideTip();return}moveTip(e)});
 document.addEventListener('mousedown',()=>{if(!isMob())hideTip()});
-document.addEventListener('contextmenu',e=>{if(isMob()){e.preventDefault();return}const h=e.target.closest('[data-a="inv"]');if(h&&G){e.preventDefault();dropInv(+h.dataset.v)}});
+document.addEventListener('contextmenu',e=>{if(isMob()||e.target.closest('[data-hov],[data-a],.slot,#cv')){e.preventDefault()}});
 function onCvClick(e){
  if(!G||G.over||G.modal)return;const r=cv.getBoundingClientRect();const {cx,cy}=camera();
  if(G.swiped&&Date.now()-G.swiped<450)return;const tx=Math.floor(((e.clientX-r.left)/VZ+cx)/TS),ty=Math.floor(((e.clientY-r.top)/VZ+cy)/TS);
@@ -1918,7 +1921,7 @@ function updateMob(){if(!isMob()||!G)return;const h=$('#mhud'),ab=$('#mab'),lg=$
  if(lg)lg.innerHTML=G.log.slice(-2).map(l=>`<div class="${l.c}">${esc(l.t)}</div>`).join('');
  const on1=onStairs(G.stairs,p.x,p.y),on2=onStairs(G.stairs2,p.x,p.y);
  const q=G.inv.map((it,i)=>it.kind==='use'?`<button class="slot" data-a="inv" data-v="${i}" data-hov="inv:${i}">${pxImg(iIcon(it),28)}${!isKnown(it)?'<b class="qm">?</b>':''}</button>`:'').filter(Boolean);
- ab.innerHTML=`${on1?`<button class="btn pri mstairs" data-a="descend" ${G.bossAlive?'disabled':''}>${SC.stairs} ${G.floor>=15?'Zum Ziel!':SC.fw+' '+(G.floor+1)}${G.bossAlive?' (Boss lebt)':''}</button>`:''}
+ ab.innerHTML=`${on1?`<button class="btn pri mstairs" data-a="descend" ${G.bossAlive?'disabled':''}>${SC.stairs} ${G.floor>=15&&!G.endless?'Zum Ziel!':SC.fw+' '+(G.floor+1)+(G.floor>=15?' ♾️':'')}${G.bossAlive?' (Boss lebt)':''}</button>`:''}
   ${on2?`<button class="btn mstairs" style="border-color:#b04a6a" data-a="descend">${SC.danger.i} ${SC.danger.n} ☠️</button>`:''}
   <div class="mabs">${G.cls.ab.map((a,i)=>{const c=abCost(a);return `<button class="mbt" data-a="ab" data-v="${i}" ${p.res<c?'disabled':''}><span>${esc(a.n)}</span><small>${c} ${SC.res}</small></button>`}).join('')}</div>
   ${q.length?`<div class="mq">${q.join('')}</div>`:''}
@@ -2137,7 +2140,7 @@ function runResume(){const d=scS();const o=d.run;if(!o)return false;try{
 function runSaveQuit(){if(!G||G.battle||G.over||G.arena)return;runAutosave(true);closeOpts();G=null;APP.screen='hub';APP.tab='run';renderApp();toast('⏸️ Run gespeichert – im Hub unter „Run“ fortsetzen.')}
 function savedRunHTML(d){const r=d.run;if(!r)return '';const c=SC.classes[r.ci]||{};const ago=Math.max(0,Math.round((Date.now()-(r._ts||0))/60000));
  return `<div class="card" style="margin-bottom:12px;border-color:var(--acc)"><div class="row" style="justify-content:space-between;gap:10px;flex-wrap:wrap">
-  <div>${pxImg(c.i||'❔',34)} <b>⏸️ Gespeicherter Run</b><div class="mut" style="margin-top:4px">${esc(c.n||'?')} · Stufe ${r.p?r.p.lvl:'?'} · ${SC.fw} ${r.floor}/15 · ${SC.goldI} ${r.gold||0} · gespeichert vor ${ago<1?'weniger als 1':ago} Min.</div>
+  <div>${pxImg(c.i||'❔',34)} <b>⏸️ Gespeicherter Run</b><div class="mut" style="margin-top:4px">${esc(c.n||'?')} · Stufe ${r.p?r.p.lvl:'?'} · ${SC.fw} ${flTxt(r.floor)} · ${SC.goldI} ${r.gold||0} · gespeichert vor ${ago<1?'weniger als 1':ago} Min.</div>
   <div class="hint" style="margin-top:4px">Solange dieser Run läuft, gelten Attribute, Skillbaum und Ausbau erst ab dem nächsten Run.</div></div>
   <div class="row" style="gap:8px"><button class="btn pri" data-a="runResume" style="font-size:16px;padding:10px 20px">▶ Fortsetzen</button><button class="btn" data-a="runAbandon">🏳️ Aufgeben</button></div></div></div>`}
 if(!window.SERVER_MODE){const flush=()=>{if(G&&!G.over&&!G.arena&&APP.screen==='game')runAutosave(true)};
@@ -2160,7 +2163,7 @@ function optsHTML(){const s=AUD.set,inRun=APP.screen==='game'&&G&&!G.over&&!G.ar
   body=`<div class="grid2" style="${isMob()?'display:flex;flex-direction:column-reverse;gap:10px':''}"><div class="card"><h3 style="margin-top:0">⌨️ Tastatur & Maus</h3><table>
    ${row('Bewegen','Pfeiltasten · WASD · Numpad')}${row('Diagonal','Q E Z/Y X · Numpad 7 9 1 3')}${row('Warten','Leertaste · . · Numpad 5')}${row('Treppe benutzen','Enter · >')}
    ${row('Fähigkeiten','1 · 2 · 3')}${row('Charakter & Inventar','C')}${row('Große Karte','M')}${row('Optionen','O · Esc')}${row('Ton stumm','N')}
-   ${row('Hinlaufen','Feld anklicken')}${row('Item wegwerfen','Rechtsklick auf Item')}${row('Level-up wählen','1 · 2 · 3')}
+   ${row('Hinlaufen','Feld anklicken')}${row('Item wegwerfen','Button „Wegwerfen“ im Inventar')}${row('Level-up wählen','1 · 2 · 3')}
    ${row('Kampf','A Angreifen · 1–3 Fähigkeiten · I Items · F Flucht · ←/→ Ziel wechseln')}</table></div>
    <div class="card"><h3 style="margin-top:0">📱 Handy</h3><table>
    ${row('Bewegen','Steuerkreuz (gedrückt halten = laufen) · auf der Karte wischen')}${row('Hinlaufen','Feld antippen')}${row('Warten','⏳ in der Mitte des Steuerkreuzes')}
@@ -2172,7 +2175,7 @@ function optsHTML(){const s=AUD.set,inRun=APP.screen==='game'&&G&&!G.over&&!G.ar
    <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn pri" data-a="optSave">💾 Jetzt speichern</button><button class="btn" data-a="optExport">📤 Spielstand exportieren</button><button class="btn" data-a="optImport">📥 Spielstand importieren</button>${ACC.name?'<button class="btn" data-a="logout">🚪 Abmelden</button>':''}</div>
    ${OPT.imp?`<div class="card" style="margin-top:10px;border-color:#b3392a"><b>⚠️ Importieren ersetzt deinen aktuellen Spielstand.</b><div class="mut">Datei: ${esc(OPT.imp.name)} · zuletzt gespeichert ${OPT.imp.when}</div><div class="row" style="gap:8px;margin-top:8px"><button class="btn pri" data-a="optImpOk">Ja, ersetzen</button><button class="btn" data-a="optImpNo">Abbrechen</button></div></div>`:''}
    <div class="hint" style="margin-top:8px">Export = Sicherungsdatei zum Aufheben oder zum Umziehen auf ein anderes Gerät.</div>`}
- if(OPT.tab==='run'&&inRun){body=`<div class="card" style="margin-bottom:8px"><b>${SC.fw} ${G.floor}/15</b> · Stufe ${G.p.lvl} · ${SC.goldI} ${G.gold}<div class="mut" style="margin-top:4px">Dein Run wird laufend automatisch gesichert. Hier kannst du ihn pausieren und später im Hub fortsetzen.</div></div>
+ if(OPT.tab==='run'&&inRun){body=`<div class="card" style="margin-bottom:8px"><b>${SC.fw} ${flTxt(G.floor)}</b> · Stufe ${G.p.lvl} · ${SC.goldI} ${G.gold}<div class="mut" style="margin-top:4px">Dein Run wird laufend automatisch gesichert. Hier kannst du ihn pausieren und später im Hub fortsetzen.</div></div>
    <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn pri" data-a="optRunQuit" ${G.battle?'disabled':''}>⏸️ Speichern & ins Hauptmenü</button><button class="btn" data-a="giveup">🏳️ Run aufgeben</button></div>
    ${G.battle?'<div class="hint" style="margin-top:8px">Während eines Kampfes kann nicht pausiert werden.</div>':''}`}
  return `<div class="box optbox" style="max-width:min(760px,96vw);width:96vw"><div class="row" style="justify-content:space-between"><h2 style="margin:0">⚙️ Optionen</h2><button class="btn sm" data-a="optClose">✖</button></div>${tb}${body}</div>`}
@@ -2201,6 +2204,12 @@ function treeJump(dir){if(!TV.hits||!TV.hits.length)return;TV.hi=(TV.hi+dir+TV.h
  TV.z=Math.max(TV.z,.9);TV.x=-n.x*TV.z;TV.y=-n.y*TV.z;TV.sel=n;updatePathPreview();drawTree();updateNInfo();const c=$('#tqn');if(c)c.textContent=`${TV.hi+1} / ${TV.hits.length}`}
 document.addEventListener('input',e=>{if(e.target&&e.target.id==='tq')treeSearch(e.target.value)});
 document.addEventListener('keydown',e=>{if(e.target&&e.target.id==='tq'){if(e.key==='Enter'){treeJump(e.shiftKey?-1:1);e.preventDefault()}if(e.key==='Escape'){e.target.value='';treeSearch('');e.target.blur()}e.stopPropagation()}},true);
+
+/* ===== Endlos-Modus nach Etage 15 ===== */
+function endlessAsk(){G.modal='endless';$('#ovl').innerHTML=`<div class="ov"><div class="box" style="max-width:560px;text-align:center">
+ <h2 style="margin-top:0">🏆 ${SC.fw} 15 geschafft!</h2><p style="line-height:1.5">Der Sieg ist dir sicher. Du kannst jetzt aufhören – oder weiter in die Tiefe gehen.<br>
+ <b>Jede weitere ${SC.fw} ist 50 % schwerer als die vorherige</b> (×1,5 · ×2,25 · ×3,4 …) – bis du fällst. Der Sieg bleibt dir auch dann.</p>
+ <div class="row" style="justify-content:center;gap:10px;flex-wrap:wrap;margin-top:14px"><button class="btn" data-a="endlessStop">🏁 Run beenden</button><button class="btn pri" data-a="endlessGo">♾️ Weiter in die Tiefe</button></div></div></div>`}
 const KEYS={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0],w:[0,-1],s:[0,1],a:[-1,0],d:[1,0],q:[-1,-1],e:[1,-1],z:[-1,1],y:[-1,1],x:[1,1],'8':[0,-1],'2':[0,1],'4':[-1,0],'6':[1,0],'7':[-1,-1],'9':[1,-1],'1':[-1,1],'3':[1,1]};
 window.addEventListener('keydown',e=>{if(/INPUT|TEXTAREA/.test(e.target.tagName))return;const kk=(e.key||'').toLowerCase();
  if(kk==='o'&&!e.ctrlKey&&!e.metaKey){optsOpen()?closeOpts():openOpts();e.preventDefault();return}
@@ -2234,6 +2243,7 @@ const ACT={
  selCls(v){APP.cls=+v;renderApp()},
  heat(v){APP.heat=+v;renderApp()},
  start(){startRun()},
+ endlessStop(){if(!G||G.modal!=='endless')return;G.modal=null;$('#ovl').innerHTML='';endRun(true)},endlessGo(){if(!G||G.modal!=='endless')return;G.modal=null;$('#ovl').innerHTML='';G.endless=true;G.won=true;log('♾️ Endlos-Modus! Ab jetzt wird jede '+SC.fw+' 50 % schwerer.','gold');descend()},
  tqNext(){treeJump(1)},tqPrev(){treeJump(-1)},
  tz(v){zoomAt(+v,null)},
  tcenter(){TV.fit();drawTree()},
