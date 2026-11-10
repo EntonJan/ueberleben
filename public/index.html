@@ -439,7 +439,7 @@ body.r3on .bfx,body.r3on #bfx{display:none}
 'use strict';
 /* ================= Utils ================= */
 let R=Math.random;
-const GAME_VER='2026.11.10-garten3';
+const GAME_VER='2026.11.10-garten4';
 function seedRng(seed){let a=seed>>>0;R=function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 function unseedRng(){R=Math.random}
 const ri=(a,b)=>a+Math.floor(R()*(b-a+1));
@@ -2432,36 +2432,51 @@ function r3Build(){const X=R3.X,W=G.w,H=G.h,map=G.map,g3=r3Tier();R3.map=map;R3.
  const fl=[],wl=[];for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=y*W+x;if(!map[i])fl.push(i);else{let near=false;for(let dy=-1;dy<=1&&!near;dy++)for(let dx=-1;dx<=1;dx++){const xx=x+dx,yy=y+dy;if(xx>=0&&yy>=0&&xx<W&&yy<H&&!map[yy*W+xx]){near=true;break}}if(near)wl.push(i)}}
  const mk=(geo,mat,n,ol)=>{const m=new X.InstancedMesh(R3.G[geo]||geo,mat,n);m.castShadow=!!ol;m.receiveShadow=true;m.instanceMatrix.setUsage(X.DynamicDrawUsage);R3.world.add(m);let o=null;if(ol){o=new X.InstancedMesh(m.geometry,R3.olM,n);o.instanceMatrix.setUsage(X.DynamicDrawUsage);R3.world.add(o)}return {m,o,ol}};
  const white=new X.MeshToonMaterial({color:0xffffff,gradientMap:R3.ramp});
- const floorGeo=new X.BoxGeometry(R3TS*.97,.5,R3TS*.97);const earthGeo=new X.CylinderGeometry(R3TS*.62,R3TS*.28,2.4,7);
- R3.L={W,H,fl,wl,tile:new Int32Array(W*H).fill(-1),st:new Int8Array(W*H).fill(-1),
-  floor:mk(floorGeo,white,fl.length,0),earth:mk(earthGeo,r3M(g3.e),fl.length,0),decoA:null,decoB:null,deco:[],cols:[],
-  m4:new X.Matrix4(),q:new X.Quaternion(),v:new X.Vector3(),sv:new X.Vector3(),c:new X.Color()};
+ const floorGeo=new X.BoxGeometry(R3TS*.97,.5,R3TS*.97);
+ // Beet-Aussehen je Gebiet: Holzbretter + Pfosten + Steine als Rand, Pflanzen/Beeren auf den Wegen
+ const BD={veg:{wood:[0xc08a50,0xa9763f],post:0x8a5a2e,stone:0xb4b2a8,ground:0x5fae46,stoneEdge:0,A:['sph',[.34,.3,.34],.22,g3.w],B:['sph',[.16,.15,.16],.12,g3.w2]},
+  pond:{wood:[0xa8987c,0x93856c],post:0x6e6250,stone:0x9aa6ae,ground:null,stoneEdge:.65,A:['cone',[.07,.75,.07],.37,g3.w],B:['dod',[.16,.1,.14],.05,0x9aa6ae]},
+  compost:{wood:[0x7a5430,0x664424],post:0x4a321e,stone:0x8a8070,ground:0x4a321e,stoneEdge:0,A:['dod',[.2,.15,.2],.08,g3.w],B:['sph',[.16,.09,.16],.05,0xf2ead8]}}[g3.deco]||null;
+ const bd=BD||{wood:[0xc08a50,0xa9763f],post:0x8a5a2e,stone:0xb4b2a8,ground:0x5fae46,stoneEdge:0,A:['sph',[.34,.3,.34],.22,g3.w],B:['sph',[.16,.15,.16],.12,g3.w2]};
+ R3.L={W,H,fl,wl,tile:new Int32Array(W*H).fill(-1),st:new Int8Array(W*H).fill(-1),floor:mk(floorGeo,white,fl.length,0),deco:[],sets:[],cols:[],
+  m4:new X.Matrix4(),q:new X.Quaternion(),v:new X.Vector3(),sv:new X.Vector3(),c:new X.Color(),up:new X.Vector3(0,1,0)};
  const L=R3.L;fl.forEach((i,k)=>{L.tile[i]=k;const x=i%W,y=(i/W)|0;L.cols[k]=r3Col(((x+y)&1)?g3.a:g3.b)});
- // Deko an den Rändern: zwei Arten je Gebiet
- const DK={veg:[['sph',[1.2,1,1.2],.5,g3.w],['sph',[.75,.7,.75],.5,g3.w2]],pond:[['cone',[.5,2.6,.5],1.3,g3.w],['dod',[.7,.5,.7],.25,0x8a9aa8]],compost:[['dod',[.85,.7,.85],.45,g3.w],['cyl',[.55,.9,.55],.45,g3.w2]]}[g3.deco]||[['sph',[1.2,1,1.2],.5,g3.w],['dod',[.7,.6,.7],.4,g3.w2]];
- const nA=[],nB=[];wl.forEach(i=>{const x=i%W,y=(i/W)|0;((x*7+y*13)%5===0?nB:nA).push(i)});
- L.decoA=mk(DK[0][0],r3M(DK[0][3]),nA.length,1.07);L.decoB=mk(DK[1][0],r3M(DK[1][3]),nB.length,1.08);
- const addD=(arr,D,set)=>arr.forEach((i,k)=>{const x=i%W,y=(i/W)|0;const h=hsh(x,y,7);L.deco.push({i,set,k,x,y,sx:D[1][0]*(0.85+h*.4),sy:D[1][1]*(0.8+h*.5),sz:D[1][2]*(0.85+h*.4),y0:D[2],rot:h*6.28,jx:(hsh(x,y,3)-.5)*.35,jz:(hsh(x,y,9)-.5)*.35})});
- addD(nA,DK[0],L.decoA);addD(nB,DK[1],L.decoB);
- for(const d of L.deco)L.st[d.i]=-1;
- // Wasserfläche im Teich
- if(g3.water){const w=new X.Mesh(new X.PlaneGeometry(W*R3TS+60,H*R3TS+60),new X.MeshToonMaterial({color:0x4fa3c8,gradientMap:R3.ramp,transparent:true,opacity:.85}));w.rotation.x=-Math.PI/2;w.position.set(W*R3TS/2,-.9,H*R3TS/2);w.receiveShadow=true;R3.world.add(w);R3.water=w}else R3.water=null;
+ const isW=(x,y)=>x<0||y<0||x>=W||y>=H||!!map[y*W+x];const hT=R3TS/2;
+ const planks=[],posts=[],stones=[],decA=[],decB=[];
+ for(const i of fl){const x=i%W,y=(i/W)|0,cx=x*R3TS,cz=y*R3TS;
+  const D=[[1,0],[-1,0],[0,1],[0,-1]];const wd=D.map(([dx,dy])=>isW(x+dx,y+dy));
+  D.forEach(([dx,dy],j)=>{if(!wd[j])return;const px=cx+dx*(hT+.07),pz=cz+dy*(hT+.07),rot=dx?Math.PI/2:0;const h=hsh(x*3+j,y*5+j,11);
+   if(bd.stoneEdge&&h<bd.stoneEdge){for(const t of [-.25,.25]){const ox=dy?t*R3TS:0,oz=dx?t*R3TS:0;const hs=hsh(x+j,y+t*4,13);stones.push({i,px:px+ox,py:-.02,pz:pz+oz,sx:.36+hs*.18,sy:.26+hs*.14,sz:.32+hs*.14,rot:hs*6.28})}}
+   else planks.push({i,px,py:-.13,pz,sx:R3TS+.16,sy:.74+(h-.5)*.06,sz:.15,rot,col:bd.wood[(x+y+j)&1]})});
+  // Pfosten an Ecken, wo zwei Bretter zusammenstoßen
+  for(const [a,b,sx,sz] of [[0,2,1,1],[0,3,1,-1],[1,2,-1,1],[1,3,-1,-1]])if(wd[a]&&wd[b])posts.push({i,px:cx+sx*(hT+.07),py:-.05,pz:cz+sz*(hT+.07),sx:.13,sy:.95,sz:.13,rot:0});
+  // Pflanzen und Beeren auf den Wegen, in den Ecken der Felder
+  const h=hsh(x,y,21);if(h<.24){const A=h<.14?bd.A:bd.B;const cx2=(hsh(x,y,23)<.5?-1:1)*R3TS*.3,cz2=(hsh(x,y,25)<.5?-1:1)*R3TS*.3;const s2=.85+hsh(x,y,27)*.4;const n=A===bd.B?3:1;
+   for(let k=0;k<n;k++){const ox=n>1?(k-1)*.17:0,oz=n>1?(k%2)*.12:0;(A===bd.A?decA:decB).push({i,px:cx+cx2+ox,py:A[2]*s2,pz:cz+cz2+oz,sx:A[1][0]*s2,sy:A[1][1]*s2,sz:A[1][2]*s2,rot:hsh(x,y,29)*6.28})}}}
+ for(const i of wl){const x=i%W,y=(i/W)|0;const h=hsh(x,y,31);if(h<.18)stones.push({i,px:x*R3TS+(hsh(x,y,33)-.5)*.7,py:-.4,pz:y*R3TS+(hsh(x,y,35)-.5)*.7,sx:.3+h*1.4,sy:.22+h,sz:.28+h*1.2,rot:h*30})}
+ const addSet=(arr,geo,mat,ol)=>{if(!arr.length)return;const set=mk(geo,mat,arr.length,ol);L.sets.push(set);arr.forEach((d,k)=>{d.set=set;d.k=k;d.s=-1;L.deco.push(d)})};
+ addSet(planks,'box',white,1.04);addSet(posts,'cyl',r3M(bd.post),1.1);addSet(stones,'dod',r3M(bd.stone),1.08);addSet(decA,bd.A[0],r3M(bd.A[3]),1.1);addSet(decB,bd.B[0],r3M(bd.B[3]),1.12);
+ L.plankCol=planks.map(d=>r3Col(d.col));
+ // Boden außerhalb der Beete (Rasen / Erde) bzw. Wasser im Teich
+ if(bd.ground!=null){const gp=new X.Mesh(new X.PlaneGeometry(W*R3TS+120,H*R3TS+120),r3M(bd.ground));gp.rotation.x=-Math.PI/2;gp.position.set(W*R3TS/2,-.5,H*R3TS/2);gp.receiveShadow=true;R3.world.add(gp)}
+ if(g3.water){const w=new X.Mesh(new X.PlaneGeometry(W*R3TS+120,H*R3TS+120),new X.MeshToonMaterial({color:0x4fa3c8,gradientMap:R3.ramp,transparent:true,opacity:.9}));w.rotation.x=-Math.PI/2;w.position.set(W*R3TS/2,-.42,H*R3TS/2);w.receiveShadow=true;R3.world.add(w);R3.water=w}else R3.water=null;
+ R3.bd=bd;
  // Riesenpflanzen im Hintergrund
  for(let k=0;k<26;k++){const a=k/26*Math.PI*2,rr=Math.max(W,H)*R3TS*.62+8+hsh(k,3,1)*14;const x=W*R3TS/2+Math.cos(a)*rr,z=H*R3TS/2+Math.sin(a)*rr;const h=8+hsh(k,5,2)*14;
-  const stem=r3Mesh('cyl',r3M(g3.w),1.04,false);r3Put(stem,x,h/2-4,z,.35,h,.35);R3.world.add(stem);
-  const top=g3.deco==='compost'?r3Mesh('dod',r3M(g3.w2),1.04,false):r3Mesh(k%3?'sph':'cone',r3M(k%3?g3.w:g3.w2),1.04,false);r3Put(top,x,h-4,z,k%3?2.6:1.8,k%3?1.6:2.6);R3.world.add(top)}
+  const stem=r3Mesh('cyl',r3M(g3.w),1.04,false);r3Put(stem,x,h/2-.5,z,.35,h,.35);R3.world.add(stem);
+  const top=g3.deco==='compost'?r3Mesh('dod',r3M(g3.w2),1.04,false):r3Mesh(k%3?'sph':'cone',r3M(k%3?g3.w:g3.w2),1.04,false);r3Put(top,x,h-.5,z,k%3?2.6:1.8,k%3?1.6:2.6);R3.world.add(top)}
  R3.visRef=null;r3Vis(true);r3WxPick()}
 function r3Vis(force){const L=R3.L;if(!L)return;if(!force&&R3.visRef===G.vis&&R3.expN===G.exp)return;R3.visRef=G.vis;R3.expN=G.exp;const W=L.W;const {m4,q,v,sv,c}=L;const fog=r3Col(r3Tier().fog);
  let fDirty=false,dDirty=false;
  for(let k=0;k<L.fl.length;k++){const i=L.fl[k];const s=G.vis[i]?2:G.exp[i]?1:0;if(L.st[i]===s&&!force)continue;L.st[i]=s;fDirty=true;const x=i%W,y=(i/W)|0;
   if(!s)sv.set(0,0,0);else sv.set(1,1,1);v.set(x*R3TS,-.25,y*R3TS);m4.compose(v,q.identity(),sv);L.floor.m.setMatrixAt(k,m4);
-  v.set(x*R3TS,-1.7-((x*13+y*7)%5)*.1,y*R3TS);q.setFromAxisAngle(new R3.X.Vector3(0,1,0),(x*31+y*17)%7);m4.compose(v,q,sv);L.earth.m.setMatrixAt(k,m4);
   c.copy(L.cols[k]);if(s===1)c.lerp(fog,.5).multiplyScalar(.6);L.floor.m.setColorAt(k,c)}
- for(const d of L.deco){const s=G.vis[d.i]?2:G.exp[d.i]?1:0;const key=d.i;if(d.s===s&&!force)continue;d.s=s;dDirty=true;
-  if(!s)sv.set(0,0,0);else sv.set(d.sx,d.sy,d.sz);v.set(d.x*R3TS+d.jx,d.y0*d.sy*(d.set===L.decoA?1:1),d.y*R3TS+d.jz);q.setFromAxisAngle(new R3.X.Vector3(0,1,0),d.rot);m4.compose(v,q,sv);d.set.m.setMatrixAt(d.k,m4);
-  if(d.set.o){sv.multiplyScalar(1.07);m4.compose(v,q,sv);d.set.o.setMatrixAt(d.k,m4)}c.setRGB(1,1,1);if(s===1)c.setRGB(.55,.58,.62);d.set.m.setColorAt(d.k,c)}
- if(fDirty){L.floor.m.instanceMatrix.needsUpdate=true;L.earth.m.instanceMatrix.needsUpdate=true;if(L.floor.m.instanceColor)L.floor.m.instanceColor.needsUpdate=true}
- if(dDirty)for(const s2 of [L.decoA,L.decoB]){s2.m.instanceMatrix.needsUpdate=true;if(s2.o)s2.o.instanceMatrix.needsUpdate=true;if(s2.m.instanceColor)s2.m.instanceColor.needsUpdate=true}}
+ for(const d of L.deco){const s=G.vis[d.i]?2:G.exp[d.i]?1:0;if(d.s===s&&!force)continue;d.s=s;dDirty=true;
+  if(!s)sv.set(0,0,0);else sv.set(d.sx,d.sy,d.sz);v.set(d.px,d.py,d.pz);q.setFromAxisAngle(L.up,d.rot);m4.compose(v,q,sv);d.set.m.setMatrixAt(d.k,m4);
+  if(d.set.o){const ol=d.set.ol;sv.set(d.sx+(ol-1)*.6,d.sy+(ol-1)*.6,d.sz+(ol-1)*.6);if(!s)sv.set(0,0,0);m4.compose(v,q,sv);d.set.o.setMatrixAt(d.k,m4)}
+  if(d.col!==undefined)c.copy(L.plankCol[d.k]);else c.setRGB(1,1,1);if(s===1)c.multiplyScalar(.55);d.set.m.setColorAt(d.k,c)}
+ if(fDirty){L.floor.m.instanceMatrix.needsUpdate=true;if(L.floor.m.instanceColor)L.floor.m.instanceColor.needsUpdate=true}
+ if(dDirty)for(const s2 of L.sets){s2.m.instanceMatrix.needsUpdate=true;if(s2.o)s2.o.instanceMatrix.needsUpdate=true;if(s2.m.instanceColor)s2.m.instanceColor.needsUpdate=true}}
 /* ---------- Figuren ---------- */
 function r3Eyes(par,y,z,sp,sz,look){const w=r3M(0xffffff),dk=new R3.X.MeshBasicMaterial({color:0x1b1a2e});for(const sx of [-sp,sp]){const e=r3Mesh('sph',w,0,false);r3Put(e,sx,y,z,sz,sz,sz*.6);par.add(e);const p=new R3.X.Mesh(R3.G.sph,dk);r3Put(p,0,-.05,.55,.55,.55,.55);e.add(p)}}
 function r3Crown(par,y,s=1){const gm=r3M(0xffd23a,{emissive:0xffa000,emissiveIntensity:.3});const g=new R3.X.Group();g.add(r3Put(r3Mesh('cyl',gm,1.08,false),0,0,0,.3*s,.16*s,.3*s));for(let i=0;i<5;i++){const a=i/5*Math.PI*2;g.add(r3Put(r3Mesh('cone',gm,1.1,false),Math.cos(a)*.26*s,.17*s,Math.sin(a)*.26*s,.08*s,.24*s,.08*s))}g.position.y=y;g.rotation.z=-.15;par.add(g);return g}
@@ -2680,7 +2695,7 @@ function r3MapFrame(dt,hr){const now=R3.now;
  // Kamera folgt
  R3.yaw+=(R3.tyaw-R3.yaw)*Math.min(1,dt*6);const tgt=new R3.X.Vector3(hp.x,0,hp.z);const hz=Math.cos(R3.pitch)*R3.dist;const off=new R3.X.Vector3(Math.sin(R3.yaw)*hz,Math.sin(R3.pitch)*R3.dist,Math.cos(R3.yaw)*hz);
  const want=tgt.clone().add(off);if(!R3.camInit||R3.camMode!=='map'){R3.camPos.copy(want);R3.look.copy(tgt);R3.camInit=1;R3.camMode='map'}else{R3.camPos.lerp(want,Math.min(1,dt*5));R3.look.lerp(tgt.add(new R3.X.Vector3(0,.6,0)),Math.min(1,dt*6))}
- R3.plight.distance=9;R3.sc.fog.near=R3.dist*1.6;R3.sc.fog.far=R3.dist*4.2;r3WxFrame(dt,hp);if(R3.water)R3.water.position.y=-.9+Math.sin(now/900)*.05}
+ R3.plight.distance=9;R3.sc.fog.near=R3.dist*1.6;R3.sc.fog.far=R3.dist*4.2;r3WxFrame(dt,hp);if(R3.water)R3.water.position.y=-.42+Math.sin(now/900)*.04}
 function r3StatusFx(hr,now){const p=G.p;let sh=R3.shield;if(p.buffs&&p.buffs.guard){if(!sh){sh=new R3.X.Mesh(R3.G.sph,new R3.X.MeshBasicMaterial({color:0x7ad0ff,transparent:true,opacity:.22,blending:R3.X.AdditiveBlending,depthWrite:false}));R3.shield=sh;R3.fxG.add(sh)}sh.visible=true;sh.position.copy(hr.g.position).add(new R3.X.Vector3(0,.9,0));sh.scale.setScalar(1.15+.04*Math.sin(now/200))}else if(sh)sh.visible=false;
  hr.g.traverse(o=>{if(o.isMesh&&o.material&&o.material.isMeshToonMaterial&&o.material.userData.evade===undefined){}});
  if(p.buffs&&p.buffs.venom&&r3rnd()<.08){const v=r3HeroHand();r3Sparkle(v,0x9be04f,1)}}
@@ -2732,13 +2747,22 @@ function ambTick(){const c=AUD.ctx;const on=typeof R3!=='undefined'&&r3On()&&G&&
  else AMB.next=t+2}
 function ambThunder(){if(!AUD.ctx||sndOff()||AUD.ctx.state!=='running')return;const t=AUD.ctx.currentTime;noise(AUD.sfx,t,1.8,{ft:'lowpass',f:420,to:60,v:.45});noise(AUD.sfx,t+.05,.4,{ft:'lowpass',f:900,to:200,v:.2})}
 /* ---------- Kampf ---------- */
-function r3BattleBuild(){const X=R3.X,A=R3.arena,g3=r3Tier();A.clear();
- const top=r3Mesh('cyl',r3M(g3.a),1.015);r3Put(top,0,-.3,0,7,.6,7);A.add(top);const rim=new X.Mesh(new X.TorusGeometry(7,.2,8,64),r3M(0xf2d49b));rim.rotation.x=Math.PI/2;rim.position.y=.02;A.add(rim);
+function r3BattleBuild(){const X=R3.X,A=R3.arena,g3=r3Tier();A.clear();const bd=R3.bd||{wood:[0xc08a50,0xa9763f],post:0x8a5a2e,stone:0xb4b2a8,ground:0x5fae46,stoneEdge:0,A:['sph',[.34,.3,.34],.22,g3.w],B:['sph',[.16,.15,.16],.12,g3.w2]};
+ // Kampf-Beet: rundes Hochbeet aus Brettern, Pfosten und Steinen
+ const top=r3Mesh('cyl',r3M(g3.a),0);r3Put(top,0,-.3,0,7,.6,7);top.receiveShadow=true;A.add(top);
  const inner=new X.Mesh(new X.RingGeometry(3.3,3.7,48),r3M(g3.b));inner.rotation.x=-Math.PI/2;inner.position.y=.012;inner.receiveShadow=true;A.add(inner);
- const under=new X.Mesh(new X.ConeGeometry(6.9,7.5,9),r3M(g3.e));under.rotation.x=Math.PI;under.position.y=-4.35;A.add(under);
- for(let i=0;i<18;i++){const a=i/18*Math.PI*2,x=Math.cos(a)*6.4,z=Math.sin(a)*6.4;if(z>2.4)continue;const alt=i%3===0;const m=alt?r3Mesh(g3.deco==='pond'?'dod':g3.deco==='compost'?'cyl':'sph',r3M(g3.w2),1.08):r3Mesh(g3.deco==='pond'?'cone':g3.deco==='compost'?'dod':'sph',r3M(g3.w),1.07);
-  if(g3.deco==='pond'&&!alt)r3Put(m,x,1.2,z,.5,2.6,.5);else r3Put(m,x,.45,z,alt?.8:1.25,alt?.7:1,alt?.8:1.25);m.rotation.y=i;A.add(m)}
- for(let k=0;k<10;k++){const a=Math.PI*(1.1+k*.08),rr=13+(k%3)*3;const x=Math.cos(a)*rr,z=Math.sin(a)*rr,h=7+(k%4)*3;const st=r3Mesh('cyl',r3M(g3.w),1.04,false);r3Put(st,x,h/2-4,z,.35,h,.35);A.add(st);const tp=r3Mesh(k%2?'sph':'cone',r3M(k%2?g3.w:g3.w2),1.04,false);r3Put(tp,x,h-4,z,k%2?2.4:1.6,k%2?1.5:2.4);A.add(tp)}
+ const N=22,R=7.1;for(let i=0;i<N;i++){const a=i/N*Math.PI*2,a2=(i+.5)/N*Math.PI*2;const len=2*R*Math.sin(Math.PI/N)+.12;
+  if(bd.stoneEdge&&i%3!==0){for(const t of [-.25,.25]){const aa=a2+t*(Math.PI*2/N);const st=r3Mesh('dod',r3M(bd.stone),1.08);r3Put(st,Math.cos(aa)*R,0,Math.sin(aa)*R,.55,.38,.5);st.rotation.y=i+t;A.add(st)}}
+  else{const pl=r3Mesh('box',r3M(bd.wood[i&1]),1.04);r3Put(pl,Math.cos(a2)*R,-.1,Math.sin(a2)*R,len,.8,.16);pl.rotation.y=-a2+Math.PI/2;A.add(pl)}
+  const po=r3Mesh('cyl',r3M(bd.post),1.1);r3Put(po,Math.cos(a)*R,0,Math.sin(a)*R,.14,1.05,.14);A.add(po)}
+ for(let i=0;i<14;i++){const a=i/14*Math.PI*2+.2,rr=8+(i%3)*.6;const st=r3Mesh('dod',r3M(bd.stone),1.08);const s2=.35+(i%4)*.12;r3Put(st,Math.cos(a)*rr,-.35,Math.sin(a)*rr,s2*1.2,s2,s2);st.rotation.set(i,i*2,0);A.add(st)}
+ // Pflanzen und Beeren am Rand des Kampf-Beets (hinten, damit die Sicht frei bleibt)
+ for(let i=0;i<26;i++){const a=Math.PI*(1.02+i/26*.96)+((i*37)%7-3)*.01,rr=5.6+(i%3)*.4;const useB=i%3===0;const D=useB?bd.B:bd.A;const s2=1.1+(i%4)*.15;const n=useB?3:1;
+  for(let k=0;k<n;k++){const m=r3Mesh(D[0],r3M(D[3]),1.1);r3Put(m,Math.cos(a)*rr+(n>1?(k-1)*.18:0),D[2]*s2,Math.sin(a)*rr+(n>1?(k%2)*.14:0),D[1][0]*s2,D[1][1]*s2,D[1][2]*s2);m.rotation.y=i;A.add(m)}}
+ // Boden rundherum
+ if(bd.ground!=null){const gp=new X.Mesh(new X.CircleGeometry(70,40),r3M(bd.ground));gp.rotation.x=-Math.PI/2;gp.position.y=-.55;gp.receiveShadow=true;A.add(gp)}
+ if(g3.water){const w=new X.Mesh(new X.CircleGeometry(70,40),new X.MeshToonMaterial({color:0x4fa3c8,gradientMap:R3.ramp,transparent:true,opacity:.9}));w.rotation.x=-Math.PI/2;w.position.y=-.45;A.add(w)}
+ for(let k=0;k<10;k++){const a=Math.PI*(1.1+k*.08),rr=13+(k%3)*3;const x=Math.cos(a)*rr,z=Math.sin(a)*rr,h=7+(k%4)*3;const st=r3Mesh('cyl',r3M(g3.w),1.04,false);r3Put(st,x,h/2-.5,z,.35,h,.35);A.add(st);const tp=r3Mesh(k%2?'sph':'cone',r3M(k%2?g3.w:g3.w2),1.04,false);r3Put(tp,x,h-.5,z,k%2?2.4:1.6,k%2?1.5:2.4);A.add(tp)}
  R3.tring=new X.Mesh(new X.TorusGeometry(.9,.07,8,40),new X.MeshBasicMaterial({color:0xffcc33}));R3.tring.rotation.x=Math.PI/2;A.add(R3.tring);R3.arenaK=R3.tierK}
 function r3BattleFrame(B,dt,hr){const now=R3.now,X=R3.X;if(R3.arenaK!==R3.tierK||!R3.tring)r3BattleBuild();
  if(R3.bt!==B){R3.bt=B;R3.bt0=now;R3.camMode='bt';R3.slots=new Map();R3.slotK=-1}
