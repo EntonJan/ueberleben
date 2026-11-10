@@ -2158,8 +2158,9 @@ function openOpts(tab){audUnlock();if(tab)OPT.tab=tab;let o=document.getElementB
  o.innerHTML=optsHTML();o.style.display='flex'}
 function closeOpts(){const o=document.getElementById('optov');if(o)o.style.display='none';OPT.imp=null}
 const optsOpen=()=>{const o=document.getElementById('optov');return !!(o&&o.style.display!=='none')};
-function exportSave(){const blob=new Blob([JSON.stringify(SAVE,null,1)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);
- const dt=new Date().toISOString().slice(0,10);a.download=`ueberleben-spielstand-${(ACC.name||'gast').replace(/[^\w-]/g,'')}-${dt}.json`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500);toast('📤 Spielstand exportiert')}
+async function exportSave(){const json=JSON.stringify(SAVE,null,1);const dt=new Date().toISOString().slice(0,10);const fname=`ueberleben-spielstand-${(ACC.name||'gast').replace(/[^\w-]/g,'')}-${dt}.json`;
+ if(window.claude&&window.claude.use){try{const dl=await window.claude.use('downloads');if(dl){try{await dl.save({filename:fname,data:json});toast('📤 Spielstand exportiert')}catch(e){if(e&&e.code!=='declined')toast('Export hier nicht möglich ('+(e.code||'Fehler')+')')}return}}catch(e){}}
+ const blob=new Blob([json],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=fname;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500);toast('📤 Spielstand exportiert')}
 function importSave(){const i=document.createElement('input');i.type='file';i.accept='.json,application/json';i.onchange=()=>{const f=i.files[0];if(!f)return;const r=new FileReader();
  r.onload=()=>{try{const raw=JSON.parse(r.result);if(!raw||!raw.sc||(!raw.sc.office&&!raw.sc.island))throw 0;OPT.imp={raw,name:f.name,when:raw.ts?new Date(raw.ts).toLocaleString('de-DE'):'unbekannt'};openOpts('spielstand')}catch(e){toast('❌ Keine gültige Spielstand-Datei')}};r.readAsText(f)};i.click()}
 function importApply(){if(!OPT.imp)return;const m=migrate(OPT.imp.raw);SAVE=m;OPT.imp=null;saveNow();closeOpts();G=null;APP.screen=SC?'hub':APP.screen;renderApp();toast('📥 Spielstand importiert')}
