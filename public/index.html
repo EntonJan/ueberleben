@@ -439,7 +439,7 @@ body.r3on .bfx,body.r3on #bfx{display:none}
 'use strict';
 /* ================= Utils ================= */
 let R=Math.random;
-const GAME_VER='2026.11.10-garten5';
+const GAME_VER='2026.11.10-garten6';
 function seedRng(seed){let a=seed>>>0;R=function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 function unseedRng(){R=Math.random}
 const ri=(a,b)=>a+Math.floor(R()*(b-a+1));
@@ -2158,9 +2158,9 @@ const SFX={
  block:t=>{voice(AUD.sfx,t,180,.12,{w:'p50',to:140,v:.16,s:.3,d:.03});noise(AUD.sfx,t,.08,{ft:'lowpass',f:2500,v:.2})},
  shield:t=>{[0,4,7,12].forEach((s,i)=>voice(AUD.sfx,t+i*.04,semi(523,s),.12,{w:'p25',v:.08}))},
  heal:t=>{[0,4,7,12].forEach((s,i)=>voice(AUD.sfx,t+i*.05,semi(440,s),.1,{w:'tri',v:.15}))},
- kill:t=>{voice(AUD.sfx,t,400,.22,{w:'p25',to:60,v:.14,s:.4,d:.06});noise(AUD.sfx,t,.2,{ft:'lowpass',f:2000,to:200,v:.18});voice(AUD.sfx,t+.12,1318,.05,{w:'p12',v:.06});voice(AUD.sfx,t+.17,1760,.07,{w:'p12',v:.06})},
+ kill:t=>{const ke=AUD.killE;AUD.killE=null;const km=eMat(ke);if(km){EK[km](t);voice(AUD.sfx,t+.14,1318,.05,{w:'p12',v:.05});voice(AUD.sfx,t+.19,1760,.07,{w:'p12',v:.05});return}voice(AUD.sfx,t,400,.22,{w:'p25',to:60,v:.14,s:.4,d:.06});noise(AUD.sfx,t,.2,{ft:'lowpass',f:2000,to:200,v:.18});voice(AUD.sfx,t+.12,1318,.05,{w:'p12',v:.06});voice(AUD.sfx,t+.17,1760,.07,{w:'p12',v:.06})},
  bosskill:t=>{voice(AUD.sfx,t,200,.8,{w:'p50',to:30,v:.2,s:.6,d:.2,r:.3});noise(AUD.sfx,t,.9,{ft:'lowpass',f:3000,to:80,v:.3})},
- abil:t=>{voice(AUD.sfx,t,220,.25,{w:'p25',to:880,v:.12,s:.5,d:.1});noise(AUD.sfx,t,.2,{ft:'bandpass',f:1000,to:4000,q:1.5,v:.12})},
+ abil:t=>{if(AUD.abilK&&AB[AUD.abilK]){AB[AUD.abilK](t);return}voice(AUD.sfx,t,220,.25,{w:'p25',to:880,v:.12,s:.5,d:.1});noise(AUD.sfx,t,.2,{ft:'bandpass',f:1000,to:4000,q:1.5,v:.12})},
  chest:t=>{noise(AUD.sfx,t,.1,{ft:'lowpass',f:1500,v:.2});[0,3,7].forEach((s,i)=>voice(AUD.sfx,t+.08+i*.06,semi(660,s),.1,{w:'p25',v:.1}))},
  coin:t=>{voice(AUD.sfx,t,1318,.05,{w:'p25',v:.08});voice(AUD.sfx,t+.05,1975,.12,{w:'p25',v:.08})},
  pick:(t,r=0)=>{const base=[392,440,523,587,698,880][r]||392;const n=r>=3?5:3;for(let i=0;i<n;i++)voice(AUD.sfx,t+i*.05,semi(base,[0,7,12,16,19][i]),.09,{w:r>=4?'p12':'p25',v:.08+r*.012});if(r>=5)noise(AUD.sfx,t+.25,.4,{f:8000,v:.06})},
@@ -2174,12 +2174,65 @@ const SFX={
  error:t=>voice(AUD.sfx,t,140,.12,{w:'p50',v:.08}),
 };
 let sfxLast={};
+/* ---- Material-Klänge: Waffe × Gegner (nur Klang, keine Spiellogik) ---- */
+function wMat(){const m=typeof G!=='undefined'&&G&&G.equip&&G.equip.main;if(!m)return 'fist';const t=m.ilvl<6?0:m.ilvl<12?1:2;
+ if(SC&&SC.id==='garden')return m.slot==='w2'?['wood','metal','gold'][t]:['thorn','sting','needle'][t];return m.slot==='w2'?'heavy':'blade'}
+function eMat(e){if(!e||!e.def||!e.def.m)return null;return {blob:'squish',snail:'squish',worm:'squish',ant:'shell',beetle:'shell',spider:'shell',frog:'flesh',mole:'flesh',fly:'buzz'}[e.def.m.s]||'flesh'}
+const SX=(t,f,d,o)=>voice(AUD.sfx,t,f,d,o),SN=(t,d,o)=>noise(AUD.sfx,t,d,o);
+const SW={// Schwung
+ fist:t=>SN(t,.12,{ft:'bandpass',f:500,to:1100,q:1.2,v:.09}),
+ light:t=>SN(t,.16,{ft:'bandpass',f:900,to:3200,q:1.4,v:.11}),
+ heavy:t=>{SN(t,.28,{ft:'bandpass',f:350,to:1400,q:1.1,v:.14});SX(t,90,.25,{w:'sine',to:60,v:.08,s:.5,d:.1})}};
+const WI={// Waffenanteil des Treffers
+ fist:t=>{SX(t,150,.1,{w:'sine',to:70,v:.22,s:.3,d:.04});SN(t,.08,{ft:'lowpass',f:700,v:.18})},
+ thorn:t=>{SX(t,520,.05,{w:'tri',to:300,v:.12,s:.2,d:.02});SN(t,.05,{ft:'bandpass',f:1900,q:1.5,v:.16})},
+ sting:t=>{SX(t,2400,.06,{w:'sine',to:1100,v:.07,s:.2,d:.02});SN(t,.04,{f:5200,v:.12})},
+ needle:t=>{SX(t,3150,.35,{w:'sine',v:.05,s:.35,d:.12,r:.2});SX(t,4720,.2,{w:'sine',v:.03,s:.3,d:.06,r:.12});SN(t,.03,{f:6000,v:.1})},
+ wood:t=>{SX(t,250,.09,{w:'sine',to:170,v:.24,s:.3,d:.03});SX(t,520,.05,{w:'tri',v:.08,s:.2,d:.02});SN(t,.06,{ft:'bandpass',f:900,q:2,v:.15})},
+ metal:t=>{SX(t,880,.32,{w:'tri',v:.08,s:.3,d:.1,r:.18});SX(t,1335,.36,{w:'sine',v:.05,s:.3,d:.12,r:.2});SN(t,.07,{f:3000,v:.14})},
+ gold:t=>{SX(t,523,.7,{w:'sine',v:.09,s:.4,d:.25,r:.35});SX(t,784,.6,{w:'sine',v:.06,s:.35,d:.2,r:.3});SX(t,1046,.5,{w:'sine',v:.05,s:.3,d:.18,r:.25});SX(t,110,.25,{w:'sine',to:50,v:.25,s:.4,d:.08});SN(t,.2,{ft:'lowpass',f:900,to:150,v:.2})},
+ blade:t=>{SN(t,.1,{f:3600,v:.16});SX(t,1400,.06,{w:'tri',to:700,v:.08,s:.2,d:.02})},
+ heavy:t=>{SX(t,120,.2,{w:'sine',to:48,v:.26,s:.4,d:.06});SN(t,.15,{ft:'lowpass',f:900,to:200,v:.22})}};
+const EI={// Gegneranteil (Körper/Panzer)
+ squish:t=>{SN(t,.16,{ft:'lowpass',f:800,to:180,v:.24});SX(t+.01,190,.11,{w:'sine',to:85,v:.14,s:.3,d:.04})},
+ shell:t=>{SN(t,.05,{ft:'bandpass',f:2600,q:3,v:.2});SN(t+.035,.04,{ft:'bandpass',f:3400,q:3,v:.14});SX(t,900,.05,{w:'tri',to:380,v:.07,s:.2,d:.02})},
+ flesh:t=>{SX(t,165,.13,{w:'sine',to:80,v:.2,s:.3,d:.05});SN(t,.1,{ft:'lowpass',f:850,v:.16})},
+ buzz:t=>{SX(t,240,.14,{w:'saw',to:180,v:.035,s:.6,d:.05,vib:2});SN(t,.06,{f:4000,v:.07})}};
+const EK={// Todesklang je Material
+ squish:t=>{SN(t,.3,{ft:'lowpass',f:1200,to:120,v:.3});SX(t,260,.2,{w:'sine',to:60,v:.16,s:.3,d:.06});SX(t+.18,900,.06,{w:'sine',to:1400,v:.06,s:.2,d:.02})},
+ shell:t=>{SN(t,.22,{ft:'bandpass',f:1800,q:.7,v:.26});for(let i=0;i<4;i++)SN(t+.05+i*.04,.03,{ft:'bandpass',f:2800+i*400,q:3,v:.12})},
+ flesh:t=>{SX(t,140,.3,{w:'sine',to:45,v:.24,s:.4,d:.08});SN(t,.25,{ft:'lowpass',f:1500,to:150,v:.2})},
+ buzz:t=>{SX(t,420,.45,{w:'saw',to:80,v:.04,s:.6,d:.15,vib:2});SN(t,.1,{f:4500,v:.06})}};
+const EA={// Angriffslaute der Gegner (nach Modellform)
+ blob:t=>SX(t,280,.14,{w:'sine',to:560,v:.12,s:.4,d:.05}),
+ snail:t=>SN(t,.3,{ft:'bandpass',f:300,to:1400,q:2,v:.12}),
+ ant:t=>{SN(t,.02,{ft:'bandpass',f:3200,q:4,v:.16});SN(t+.07,.02,{ft:'bandpass',f:3000,q:4,v:.16})},
+ beetle:t=>{SN(t,.03,{ft:'bandpass',f:2600,q:4,v:.16});SX(t+.03,110,.2,{w:'tri',to:70,v:.12,s:.5,d:.08})},
+ frog:t=>{SX(t,150,.13,{w:'tri',to:110,v:.15,s:.6,d:.05,vib:1.5});SX(t+.16,140,.13,{w:'tri',to:100,v:.13,s:.6,d:.05,vib:1.5})},
+ fly:t=>SX(t,300,.4,{w:'saw',to:420,v:.03,s:.7,d:.1,vib:3}),
+ spider:t=>SN(t,.32,{f:4200,v:.09}),
+ worm:t=>{for(let i=0;i<5;i++)SN(t+i*.045,.02,{ft:'bandpass',f:2400+i*150,q:4,v:.1})},
+ mole:t=>{SX(t,85,.35,{w:'tri',to:60,v:.16,s:.6,d:.1,vib:1});SN(t,.3,{ft:'lowpass',f:450,v:.16})}};
+const AB={// Fähigkeiten
+ whirl:t=>{SW.light(t);SW.light(t+.15);SW.heavy(t+.05)},guard:t=>{WI.metal(t);SX(t+.05,1320,.5,{w:'sine',v:.04,s:.4,d:.2,r:.3})},
+ charge:t=>{SX(t,70,.45,{w:'tri',to:140,v:.14,s:.6,d:.15});SW.heavy(t+.12)},shot:t=>{SX(t,820,.09,{w:'sine',to:190,v:.14,s:.2,d:.03});SN(t,.04,{ft:'bandpass',f:1500,q:2,v:.1})},
+ smoke:t=>SN(t,.45,{ft:'lowpass',f:1300,to:180,v:.22}),venom:t=>{SN(t,.3,{f:4500,v:.07});for(let i=0;i<3;i++)SX(t+.08+i*.07,500+i*180,.05,{w:'sine',to:900+i*200,v:.06,s:.2,d:.02})},
+ bolt:t=>{SX(t,1300,.18,{w:'saw',to:180,v:.05,s:.4,d:.05});SN(t,.22,{f:2500,v:.16});SN(t+.08,.12,{f:5000,v:.1})},
+ nova:t=>{SN(t,.5,{ft:'bandpass',f:500,to:4000,q:1,v:.16});[523,659,784,1046].forEach((f,i)=>SX(t+.1+i*.03,f,.5,{w:'sine',v:.04,s:.4,d:.2,r:.25}))},
+ heal:t=>[784,988,1175,1568].forEach((f,i)=>SX(t+i*.07,f,.35,{w:'sine',v:.05,s:.4,d:.15,r:.2}))};
+function sfxDl(){return (typeof R3!=='undefined'&&R3.st==='ok'&&typeof r3On==='function'&&r3On())?(R3.impact||0):0}
+function sndT(){return AUD.ctx.currentTime+.005+sfxDl()}
+function sndOk(){return AUD.ctx&&!sndOff()&&AUD.ctx.state==='running'}
+function sfxSwing(){if(!sndOk())return;const m=wMat();(SW[{fist:'fist',thorn:'light',sting:'light',needle:'light',blade:'light',wood:'heavy',metal:'heavy',gold:'heavy',heavy:'heavy'}[m]]||SW.light)(AUD.ctx.currentTime+.005)}
+function sfxImpact(e,crit){if(!sndOk())return false;const t=sndT(),em=eMat(e);const byP=!!AUD.pAtk;if(!byP&&!em)return false;
+ if(byP)(WI[wMat()]||WI.fist)(t);if(em)EI[em](t+.008);else if(!byP)return false;if(crit){SX(t,1240,.12,{w:'sine',v:.06,s:.3,d:.04});SX(t,95,.3,{w:'sine',to:40,v:.22,s:.4,d:.1})}return true}
+function sfxEnemyAtk(e){if(!sndOk()||!e||!e.def||!e.def.m)return;const f=EA[e.def.m.s];const t=AUD.ctx.currentTime+.005;if(f)f(t);if(e.def.rng)SX(t+.08,620,.08,{w:'sine',to:200,v:.08,s:.2,d:.03})}
 function sfx(n,arg){if(!AUD.ctx||sndOff()||AUD.ctx.state!=='running')return;const now=performance.now();if(sfxLast[n]&&now-sfxLast[n]<35)return;sfxLast[n]=now;
- const f=SFX[n];if(f)try{f(AUD.ctx.currentTime+.005,arg)}catch(e){}}
+ const f=SFX[n];if(f)try{f(AUD.ctx.currentTime+.005+sfxDl(),arg)}catch(e){}}
 function sfxFloat(x,y,t,col){if(!AUD.ctx||sndOff()||!G)return;t=String(t);const me=G.p&&x===G.p.x&&y===G.p.y;
  if(/pariert/.test(t))sfx('parry');else if(/ausgewichen/.test(t))sfx('dodge');else if(/aufgehoben/.test(t))sfx('shield');
  else if(/geblockt/.test(t)||t.startsWith('🛡'))sfx('block');else if(t[0]==='+'&&me)sfx('heal');
- else if(me&&/-\d/.test(t))sfx(/💥/.test(t)?'crit':'hurt');else if(!me&&/\d/.test(t)&&!/[+]/.test(t))sfx(/💥/.test(t)?'crit':'hit')}
+ else if(me&&/-\d/.test(t))sfx(/💥/.test(t)?'crit':'hurt');else if(!me&&/\d/.test(t)&&!/[+]/.test(t)){let e=null;try{e=(G.battle&&G.battle.en.find(z=>z.x===x&&z.y===y))||G.enemies.find(z=>z.x===x&&z.y===y)}catch(_){}if(!sfxImpact(e,/💥/.test(t)))sfx(/💥/.test(t)?'crit':'hit')}}
 function sndPanelHTML(){const s=AUD.set;return `<div class="card" style="min-width:min(330px,86vw);height:auto;align-self:center;max-width:92vw"><h3 style="margin-top:0">🔊 Klang</h3>
  <label style="display:block;margin:8px 0">Musik <span class="num">${Math.round(s.mus*100)}</span>%<br><input type="range" min="0" max="100" value="${Math.round(s.mus*100)}" data-snd="mus" style="width:100%"></label>
  <label style="display:block;margin:8px 0">Effekte <span class="num">${Math.round(s.sfx*100)}</span>%<br><input type="range" min="0" max="100" value="${Math.round(s.sfx*100)}" data-snd="sfx" style="width:100%"></label>
@@ -2857,10 +2910,10 @@ window.addEventListener('keydown',e=>{
 
 /* ================= Actions ================= */
 /* --- 3D-Hooks: Animationen auslösen, Logik bleibt unverändert --- */
-{const _ba=battleAttack;battleAttack=function(){if(r3On()&&G&&G.battle&&G.battle.phase==='player'&&BTGT())r3PlayerAct('atk');try{return _ba.apply(this,arguments)}finally{r3ActDone()}};
- const _ua=useAbility;useAbility=function(i){try{if(r3On()&&G&&!G.over&&!G.modal&&(!G.battle||G.battle.phase==='player')){const ab=G.cls.ab[i];const off=ab&&['whirl','charge','shot','bolt','nova'].includes(ab.k);if(ab&&G.p.res>=abCost(ab)&&(G.battle||!off))r3PlayerAct(ab.k)}}catch(e){}try{return _ua.apply(this,arguments)}finally{r3ActDone()}};
- const _ea=enemyBattleAct;enemyBattleAct=function(e){try{r3EnemyAct(e)}catch(x){}try{return _ea.apply(this,arguments)}finally{r3ActDone()}};
- const _bp=battlePoof;battlePoof=function(e){try{r3Poof(e)}catch(x){}return _bp.apply(this,arguments)};
+{const _ba=battleAttack;battleAttack=function(){const ok=G&&G.battle&&G.battle.phase==='player'&&BTGT();if(ok){try{sfxSwing()}catch(e){}if(r3On())r3PlayerAct('atk')}AUD.pAtk=!!ok;try{return _ba.apply(this,arguments)}finally{AUD.pAtk=false;r3ActDone()}};
+ const _ua=useAbility;useAbility=function(i){try{if(r3On()&&G&&!G.over&&!G.modal&&(!G.battle||G.battle.phase==='player')){const ab=G.cls.ab[i];const off=ab&&['whirl','charge','shot','bolt','nova'].includes(ab.k);if(ab&&G.p.res>=abCost(ab)&&(G.battle||!off))r3PlayerAct(ab.k)}}catch(e){}try{const ab=G&&G.cls&&G.cls.ab[i];AUD.abilK=ab?ab.k:null;AUD.pAtk=!!(ab&&['charge','shot'].includes(ab.k))}catch(e){}try{return _ua.apply(this,arguments)}finally{AUD.abilK=null;AUD.pAtk=false;r3ActDone()}};
+ const _ea=enemyBattleAct;enemyBattleAct=function(e){try{if(!e.stun)sfxEnemyAtk(e)}catch(x){}try{r3EnemyAct(e)}catch(x){}try{return _ea.apply(this,arguments)}finally{r3ActDone()}};
+ const _bp=battlePoof;battlePoof=function(e){AUD.killE=e;try{r3Poof(e)}catch(x){}return _bp.apply(this,arguments)};
  const _bs=battleShake;battleShake=function(){if(r3On())R3.shake=Math.max(R3.shake,.4);return _bs.apply(this,arguments)};
  const _ui=useInv;useInv=function(idx){try{const it=G&&G.inv[idx];if(r3On()&&it&&it.kind==='use'&&G.battle&&G.battle.phase==='player')r3PlayerAct('item')}catch(x){}try{return _ui.apply(this,arguments)}finally{r3ActDone()}};}
 const ACT={
