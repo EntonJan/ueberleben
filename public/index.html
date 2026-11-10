@@ -439,7 +439,7 @@ body.r3on .bfx,body.r3on #bfx{display:none}
 'use strict';
 /* ================= Utils ================= */
 let R=Math.random;
-const GAME_VER='2026.11.10-garten1';
+const GAME_VER='2026.11.10-garten2';
 function seedRng(seed){let a=seed>>>0;R=function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 function unseedRng(){R=Math.random}
 const ri=(a,b)=>a+Math.floor(R()*(b-a+1));
@@ -536,14 +536,14 @@ island:{id:'island',name:'Verlassene Insel',icon:'🏝️',color:'#3fc6a0',
   'Barfuß-Läufer','Blutegel','Lianen-Schwinger','Affenreflexe','Windläufer','Vampirfledermaus'],
  keystones:['Inselkoller','Jäger-Instinkt','Steinhaut','Kokos-Rausch','Glückspilz','Rückenwind']},
 garden:{id:'garden',name:'Winzig im Garten',icon:'🐞',color:'#7cc444',r3d:1,
- sub:'Opas Schrumpfstrahl ging schief – du bist winzig! Kämpf dich in 3D durch Gemüsebeet, Gartenteich und Komposthaufen und drück an Beet 15 den Rück-Knopf.',
+ sub:'Beim Spielen in Opas Garten triffst du seinen Schrumpfstrahl – jetzt bist du winzig! Kämpf dich in 3D durch Gemüsebeet, Gartenteich und Komposthaufen und drück an Beet 15 den Rück-Knopf.',
  hp:'Lebenskraft',res:'Nektar',cur:'Samenkörner',curI:'🌰',hub:'Gartenhäuschen',heat:'Gewitter',fw:'Beet',
- intro:'Zisch! Plötzlich sind die Grashalme so hoch wie Bäume. Opas Rück-Knopf liegt ganz hinten im Garten …',
+ intro:'Zisch! Du spielst gerade in Opas Garten – und plötzlich sind die Grashalme so hoch wie Bäume. Opas Rück-Knopf liegt ganz hinten im Garten …',
  next:'Du kletterst ins nächste Beet.',
  win:'🔘 Rück-Knopf gedrückt – Plopp! Du bist wieder groß, und Opa staunt nicht schlecht.',
  lose:'Du bist erschöpft. Opa sammelt dich mit der Lupe wieder ein.',
- tiers:[{name:'Gemüsebeet',floor:'#2c4a24',floor2:'#33552a',wall:'#3f7a2e',wall2:'#2f6324',g3:{a:0x8fd45a,b:0x7cc444,w:0x3d9a3a,w2:0xe85a4a,e:0x7a4a2a,sky:[.42,.62,.82,.72,.86,.96],fog:0xbfe3f2,deco:'veg'}},
-        {name:'Gartenteich',floor:'#244a44',floor2:'#2a5650',wall:'#2f7a6a',wall2:'#25665a',g3:{a:0x9ad7a0,b:0x86c98e,w:0x4fb38a,w2:0xff9ad0,e:0x5a6b4a,sky:[.36,.58,.72,.66,.84,.9],fog:0xa8d8dc,deco:'pond',water:1}},
+ tiers:[{name:'Gemüsebeet',floor:'#4f8a3a',floor2:'#589644',wall:'#5fae46',wall2:'#4e9a3a',g3:{a:0x9be06a,b:0x8ad45a,w:0x62bf4c,w2:0xe85a4a,e:0x7a4a2a,sky:[.42,.62,.82,.72,.86,.96],fog:0xbfe3f2,deco:'veg'}},
+        {name:'Gartenteich',floor:'#3f7a6a',floor2:'#468676',wall:'#4fa08a',wall2:'#43907a',g3:{a:0xa8e2ac,b:0x96d69c,w:0x66c79a,w2:0xff9ad0,e:0x5a6b4a,sky:[.36,.58,.72,.66,.84,.9],fog:0xa8d8dc,deco:'pond',water:1}},
         {name:'Komposthaufen',floor:'#3a2a1c',floor2:'#43301f',wall:'#5e3f24',wall2:'#4a311c',g3:{a:0x8a6a44,b:0x7a5c3a,w:0x6b4a2a,w2:0xd9b84a,e:0x4a321e,sky:[.3,.28,.32,.62,.54,.5],fog:0x6a5a52,deco:'compost'}}],
  enemies:[
   [{n:'Blattlaus',i:'🟢',hp:6,dmg:2,spd:150,xp:2,m:{s:'blob',c:0x9be04f}},{n:'Nacktschnecke',i:'🐌',hp:14,dmg:4,spd:60,xp:3,m:{s:'snail',c:0xd98a4a}},
@@ -556,9 +556,9 @@ garden:{id:'garden',name:'Winzig im Garten',icon:'🐞',color:'#7cc444',r3d:1,
          {n:'Der Ochsenfrosch',i:'🐸',hp:220,dmg:13,xp:80,boss:1,m:{s:'frog',c:0x3f8a3a,crown:1}},
          {n:'Der Maulwurfkönig',i:'🦔',hp:420,dmg:19,xp:150,boss:1,m:{s:'mole',c:0x3a2e2a,crown:1}}],
  classes:[
-  {n:'Gärtner-Azubi',i:'🧑‍🌾',d:'Robust in Latzhose. Wirbelt die Harke, blockt und stürmt los.',b:{hp:55,res:15,min:4,max:7,armor:4,crit:5,dodge:0,ag:3},ab:[{k:'whirl',n:'Harkenwirbel'},{k:'guard',n:'Gießkannen-Deckel'},{k:'charge',n:'Schubkarren-Ansturm'}],unlock:0,m:{shirt:0x3f7bff,pants:0x2b5a9a,cap:0x4caf50,skin:0xffd3ad}},
-  {n:'Bastlerin',i:'👩‍🔧',d:'Flink, präzise und mit der Erbsenschleuder bewaffnet.',b:{hp:42,res:20,min:3,max:7,armor:1,crit:12,dodge:8,ag:2},ab:[{k:'shot',n:'Erbsenschleuder'},{k:'smoke',n:'Staubwolke'},{k:'venom',n:'Brennnessel-Pfeil'}],unlock:6,m:{shirt:0xff8a3d,pants:0x5a4a8a,cap:0xffd23a,skin:0xf2c29a}},
-  {n:'Kräuterkundige',i:'🧝',d:'Zerbrechlich, aber mit starker Kräutermagie und Heilung.',b:{hp:36,res:32,min:2,max:5,armor:0,crit:6,dodge:3,ag:2.5},ab:[{k:'bolt',n:'Löwenzahn-Blitz'},{k:'nova',n:'Pusteblumen-Explosion'},{k:'heal',n:'Kamillentee'}],unlock:11,m:{shirt:0x8a5fd6,pants:0x4a3a6a,cap:0x9be04f,skin:0xffe0c2}}],
+  {n:'Raufbold',i:'👦',d:'Robust in Latzhose. Wirbelt Opas Harke, blockt mit dem Gießkannen-Deckel und stürmt los.',b:{hp:55,res:15,min:4,max:7,armor:4,crit:5,dodge:0,ag:3},ab:[{k:'whirl',n:'Harkenwirbel'},{k:'guard',n:'Gießkannen-Deckel'},{k:'charge',n:'Schubkarren-Ansturm'}],unlock:0,m:{shirt:0x3f7bff,pants:0x2b5a9a,cap:0x4caf50,skin:0xffd3ad}},
+  {n:'Schleuder-Ass',i:'🧒',d:'Flink, präzise und mit seiner selbstgebauten Erbsenschleuder bewaffnet.',b:{hp:42,res:20,min:3,max:7,armor:1,crit:12,dodge:8,ag:2},ab:[{k:'shot',n:'Erbsenschleuder'},{k:'smoke',n:'Staubwolke'},{k:'venom',n:'Brennnessel-Pfeil'}],unlock:6,m:{shirt:0xff8a3d,pants:0x5a4a8a,cap:0xffd23a,skin:0xf2c29a}},
+  {n:'Kräuterforscher',i:'👦',d:'Zerbrechlich, aber er kennt Opas Kräuter – starke Kräuterkräfte und Heilung.',b:{hp:36,res:32,min:2,max:5,armor:0,crit:6,dodge:3,ag:2.5},ab:[{k:'bolt',n:'Löwenzahn-Blitz'},{k:'nova',n:'Pusteblumen-Explosion'},{k:'heal',n:'Kamillentee'}],unlock:11,m:{shirt:0x8a5fd6,pants:0x4a3a6a,cap:0x9be04f,skin:0xffe0c2}}],
  items:{heal:{n:'Walderdbeere',i:'🍓'},res:{n:'Tautropfen',i:'💧'},tele:{n:'Pusteblume',i:'🌼'},aoe:{n:'Knallerbse',i:'💥'},map:{n:'Gartenplan',i:'🗺️'},buff:{n:'Brennnessel-Tee',i:'🍵'},badP:{n:'Fliegenpilz',i:'🍄'},badS:{n:'Vogelpfeife',i:'📯'}},
  equip:{helm:[['Eichelhut','🌰'],['Schneckenhaus-Helm','🐚'],['Rosenblütenkrone','🌹']],shoulder:[['Blatt-Polster','🍃'],['Rinden-Schulter','🪵'],['Käferpanzer-Schulter','🪲']],chest:[['Gartenschürze','🦺'],['Blätterrüstung','🌿'],['Käferpanzer','🛡️']],
   glove:[['Gartenhandschuh','🧤'],['Lederhandschuh','🧤'],['Dornenhandschuh','🧤']],legs:[['Latzhose','👖'],['Grashalm-Hose','👖'],['Rindenbeinschiene','👖']],boots:[['Gummistiefel','🥾'],['Moosschuhe','👟'],['Hirschkäfer-Stiefel','👢']],
@@ -847,7 +847,7 @@ function toast(t){const d=document.createElement('div');d.className='toast';d.te
 const THEMES={
  base:{bg:'#0d0e14',panel:'#161823',panel2:'#1d2030',line:'#2a2e42',txt:'#e6e8f0',mut:'#9097b0',deep:'#0a0b10',ol:'#05050a'},
  office:{bg:'#11141f',panel:'#1a2033',panel2:'#232b44',line:'#33405f',txt:'#e9ecf5',mut:'#98a3c2',deep:'#0b0e17',ol:'#06070d'},
- garden:{bg:'#101c12',panel:'#18291a',panel2:'#203522',line:'#355a36',txt:'#eef6e6',mut:'#a3bd98',deep:'#0a140b',ol:'#040904'},
+ garden:{bg:'#355f2c',panel:'#3f6f35',panel2:'#4a7d3f',line:'#6aa356',txt:'#f6fbef',mut:'#d6e9c8',deep:'#2c5225',ol:'#17300f',hi:'rgba(255,255,255,.16)',sh:'rgba(0,0,0,.28)'},
  island:{bg:'#e6cf9c',panel:'#f3e2b6',panel2:'#ead39f',line:'#c4a36a',txt:'#3b2812',mut:'#7d6440',deep:'#d8bd85',ol:'#6b4a22',good:'#2e7d32',bad:'#b3392a',gold:'#9a6500',hi:'rgba(255,255,255,.45)',sh:'rgba(110,74,30,.28)'}};
 const PXBG={};
 function pixelBg(key,t){if(PXBG[key])return PXBG[key];let u='none';try{const c=document.createElement('canvas');c.width=c.height=32;const x=c.getContext('2d');const b=hexRgb(t.bg),l=hexRgb(t.line);
