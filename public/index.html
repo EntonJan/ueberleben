@@ -325,7 +325,7 @@ body.mob{touch-action:manipulation;-webkit-user-select:none;user-select:none;-we
 .taphint{display:none;margin-top:6px;padding-top:6px;border-top:2px dashed var(--ol);font-weight:700;color:var(--acc)}
 .mob .treecv{height:62vh;min-height:300px}
 .mob .tabs,.mob .tabrow{flex-wrap:wrap}
-#sndov input[type=range]{accent-color:var(--acc);height:28px}#sndov input[type=checkbox]{accent-color:var(--acc);width:20px;height:20px}
+#sndov input[type=range],#optov input[type=range]{accent-color:var(--acc);height:28px}#sndov input[type=checkbox],#optov input[type=checkbox],#optov input[type=radio]{accent-color:var(--acc);width:20px;height:20px}
 
 /* Handy: Kästen wachsen mit großem Text */
 .mob .btn,.mob .mbt,.mob .ab,.mob .tab{white-space:normal;overflow-wrap:break-word;-webkit-hyphens:auto;hyphens:auto;line-height:1.15;height:auto}
@@ -405,7 +405,7 @@ body.mob{touch-action:manipulation;-webkit-user-select:none;user-select:none;-we
 'use strict';
 /* ================= Utils ================= */
 let R=Math.random;
-const GAME_VER='2026.11.10-balance1';
+const GAME_VER='2026.11.10-optionen1';
 function seedRng(seed){let a=seed>>>0;R=function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 function unseedRng(){R=Math.random}
 const ri=(a,b)=>a+Math.floor(R()*(b-a+1));
@@ -563,13 +563,13 @@ const treeSpent=d=>d.tree.reduce((s,id)=>s+nodeCost(TREE.nodes[id]),0);
 const ptsTotal=d=>Math.floor((d.spent||0)/PT_EVERY);
 const ptsFree=d=>ptsTotal(d)-treeSpent(d);
 function spend(d,c){d.cur-=c;d.spent=(d.spent||0)+c}
-function attrTabHTML(){const d=scS();const ci=APP.cls;const a=(d.attrs[ci]=d.attrs[ci]||{});const prog=(d.spent||0)%PT_EVERY;
+function attrTabHTML(){const d=scS();const ci=APP.cls;const a=(d.attrs[ci]=d.attrs[ci]||{});const prog=(d.spent||0)%PT_EVERY;const tot=attrTotal(d,ci),price=attrPrice(tot),nextAt=(Math.floor(tot/ATTR_STEP)+1)*ATTR_STEP;
  const cls=SC.classes.map((k,i)=>{const locked=d.stats.bestFloor<k.unlock;const lv=Object.values(d.attrs[i]||{}).reduce((x,y)=>x+y,0);return `<button class="tab ${i===ci?'on':''}" data-a="attrCls" data-v="${i}" ${locked?'disabled':''}>${locked?'🔒':pxImg(k.i,26)} ${k.n} <span class="mut">(${lv})</span></button>`}).join('');
  const rows=ATTR.map(x=>{const l=a[x.k]||0;return `<div class="attr"><div class="row" style="gap:10px;flex-wrap:nowrap">${pxImg(x.i,30)}<div><b>${T(x.n)}</b><div class="mut" style="font-size:12.5px">+${fmtN(x.v)} je ${SC.curI} · Stufe <b>${l}</b> · gesamt <span class="good">+${fmtN(Math.round(l*x.v*100)/100)}</span></div></div></div>
-  <div class="row" style="gap:4px;flex-wrap:nowrap">${[1,10,100].map(n=>`<button class="btn sm" data-a="attrBuy" data-v="${x.k}:${n}" ${d.cur<n?'disabled':''}>+${n}</button>`).join('')}<button class="btn sm pri" data-a="attrBuy" data-v="${x.k}:max" ${d.cur<1?'disabled':''}>Max</button></div></div>`}).join('');
- return `<div class="card" style="margin-bottom:12px"><div class="row" style="justify-content:space-between"><div><b>💪 Attribute</b> <span class="mut">– nur für die gewählte Klasse · 1 ${SC.curI} = 1 Stufe · unbegrenzt</span></div><b class="gold">🌟 ${ptsFree(d)} Skillpunkt${ptsFree(d)===1?'':'e'} frei</b></div>
+  <div class="row" style="gap:4px;flex-wrap:nowrap">${[1,10,100].map(n=>{const pl=attrPlan(tot,n,d.cur);const full=attrPlan(tot,n,1e15).cost;return `<button class="btn sm" data-a="attrBuy" data-v="${x.k}:${n}" ${pl.lv<n?'disabled':''} title="Kostet ${full} ${SC.cur}">+${n}<br><span class="mut" style="font-size:10.5px">${full} ${SC.curI}</span></button>`}).join('')}${(()=>{const pm=attrPlan(tot,Infinity,d.cur);return `<button class="btn sm pri" data-a="attrBuy" data-v="${x.k}:max" ${pm.lv<1?'disabled':''} title="So viele Stufen wie bezahlbar">Max<br><span style="font-size:10.5px">+${pm.lv}</span></button>`})()}</div></div>`}).join('');
+ return `<div class="card" style="margin-bottom:12px"><div class="row" style="justify-content:space-between"><div><b>💪 Attribute</b> <span class="mut">– nur für die gewählte Klasse · unbegrenzt</span><div style="margin-top:4px">Preis pro Stufe: <b class="gold">${price} ${SC.curI}</b> <span class="mut">· ${tot} Stufen gekauft · ab ${nextAt} kostet jede Stufe ${price+1}</span></div></div><b class="gold">🌟 ${ptsFree(d)} Skillpunkt${ptsFree(d)===1?'':'e'} frei</b></div>
  <div style="margin-top:10px">${bar(prog,PT_EVERY,'linear-gradient(90deg,#8a6cff,#d9b3ff)',`Nächster Skillpunkt: ${prog} / ${PT_EVERY} ${SC.cur} ausgegeben`)}</div>
- <div class="hint" style="margin-top:6px">Jede ausgegebene ${SC.cur} zählt – auch für den Ausbau. Alle ${PT_EVERY} gibt es einen Skillpunkt für den Skillbaum, der für <b>alle</b> Klassen gilt.</div>
+ <div class="hint" style="margin-top:6px">Der Preis steigt mit <b>allen</b> gekauften Stufen dieser Klasse zusammen (alle ${ATTR_STEP} Stufen +1) – wer sich spezialisiert, kommt in einem Attribut weiter. Jede ausgegebene ${SC.cur} zählt – auch für den Ausbau. Alle ${PT_EVERY} gibt es einen Skillpunkt für den Skillbaum, der für <b>alle</b> Klassen gilt.</div>
  <div class="tabs" style="margin-top:10px;margin-bottom:0">${cls}</div></div><div class="attrgrid">${rows}</div>`}
 const RAD=r=>40+r*52;
 let TREE=null;
@@ -807,7 +807,7 @@ function hubHTML(){
  const d=scS();const tabs=[['run','▶ Run starten'],['attr','💪 Attribute'],['tree','🌳 Skillbaum'],['build','🏗️ Ausbau'],['arena','🏟️ Arena'],['stats','📊 Statistik'],['save','💾 Spielstand']];
  let body='';
  if(APP.tab==='run')body=runTabHTML();else if(APP.tab==='tree')body=treeTabHTML();else if(APP.tab==='build')body=buildTabHTML();else if(APP.tab==='attr')body=attrTabHTML();else if(APP.tab==='arena')body=arenaTabHTML();else if(APP.tab==='stats')body=statsTabHTML();else body=saveTabHTML();
- return `<div class="hub"><div class="hubtop"><button class="btn sm" data-a="toTitle">← Szenarien</button>${sndBtn()}<h2>${SC.icon} ${SC.name} · ${SC.hub}</h2><span class="cur" id="curDisp">${SC.curI} ${d.cur} ${SC.cur} · 🌟 ${ptsFree(d)}</span><span style="flex:1"></span><span class="accbox">${accHTML()}</span></div>
+ return `<div class="hub"><div class="hubtop"><button class="btn sm" data-a="toTitle">← Szenarien</button>${optBtn()}<h2>${SC.icon} ${SC.name} · ${SC.hub}</h2><span class="cur" id="curDisp">${SC.curI} ${d.cur} ${SC.cur} · 🌟 ${ptsFree(d)}</span><span style="flex:1"></span><span class="accbox">${accHTML()}</span></div>
  <div class="tabs">${tabs.map(t=>`<button class="tab ${APP.tab===t[0]?'on':''}" data-a="tab" data-v="${t[0]}">${t[1]}</button>`).join('')}</div>${body}</div>`;
 }
 function runTabHTML(){
@@ -817,11 +817,11 @@ function runTabHTML(){
   <div class="statrow">${(()=>{const lv=Object.values(d.attrs[i]||{}).reduce((x,y)=>x+y,0);return lv?`<span class="gold">💪 ${lv} Attributstufen</span>`:''})()}<span>❤️ ${c.b.hp}</span><span>⚡ ${c.b.res}</span><span>⚔️ ${c.b.min}–${c.b.max}</span><span>🛡️ ${c.b.armor}</span><span>🎯 ${c.b.crit}%</span><span>💨 ${c.b.dodge}%</span><span>⏱️ ${c.b.ag}s</span></div>
   <ul>${c.ab.map((a,j)=>`<li><b>[${j+1}] ${a.n}</b> (${ABIL[a.k].cost}): ${T(ABIL[a.k].d)}</li>`).join('')}</ul></button>`}).join('');
  let heat='';for(let h=0;h<=d.heatMax;h++)heat+=`<button class="btn sm heat ${APP.heat===h?'on':''}" data-a="heat" data-v="${h}">${h}</button>`;
- return `<div class="clsgrid">${cls}</div>${relicPickHTML(d)}${ghostInfoHTML(d)}
+ return `${savedRunHTML(d)}<div class="clsgrid">${cls}</div>${relicPickHTML(d)}${ghostInfoHTML(d)}
  <div class="card"><b>${SC.heat}</b> <span class="mut">– je Stufe +20% Gegnerstärke und +25% ${SC.cur}. Neue Stufe nach einem Sieg auf der höchsten.</span>
  <div class="heatrow">${heat}${d.heatMax<5?`<span class="mut" style="font-size:12px">🔒 Stufe ${d.heatMax+1}</span>`:''}</div>
- <button class="btn pri" data-a="start" style="font-size:16px;padding:12px 26px">Los geht's ${SC.classes[APP.cls].i}</button>
- <div class="hint" style="margin-top:12px">Steuerung: Pfeiltasten/WASD (Diagonalen: Q E Y/Z X oder Numpad) · C = Charakter & Inventar · Leertaste = warten · 1/2/3 = Fähigkeiten · Enter = Abgang benutzen · M = Karte · Händler: hineinlaufen · Klick auf ein Feld = hinlaufen · Rechtsklick auf Item = wegwerfen.<br>Ein laufender Run wird nicht gespeichert, dein Meta-Fortschritt schon.</div></div>`;
+ ${d.run?'<button class="btn" disabled style="font-size:15px;padding:12px 20px">⏸️ Erst gespeicherten Run fortsetzen oder aufgeben</button>':`<button class="btn pri" data-a="start" style="font-size:16px;padding:12px 26px">Los geht's ${SC.classes[APP.cls].i}</button>`}
+ <div class="hint" style="margin-top:12px">Steuerung: Pfeiltasten/WASD (Diagonalen: Q E Y/Z X oder Numpad) · C = Charakter & Inventar · Leertaste = warten · 1/2/3 = Fähigkeiten · Enter = Abgang benutzen · M = Karte · Händler: hineinlaufen · Klick auf ein Feld = hinlaufen · Rechtsklick auf Item = wegwerfen.<br>Dein Run wird automatisch gesichert – über ⚙️ Optionen (O / Esc) kannst du ihn pausieren und später fortsetzen.</div></div>`;
 }
 function statsTabHTML(){return statsTabHTML0()+historyHTML()}
 function statsTabHTML0(){
@@ -1110,7 +1110,7 @@ function eqLines(it){const L=[];if(it.base)Object.keys(it.base).forEach(k=>L.pus
 const DIRS=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
 const TS=54;
 function startRun(){
- const d=scS();const cls=SC.classes[APP.cls];d.lastCls=APP.cls;d.lastHeat=APP.heat;
+ const d=scS();if(d.run){toast('Erst den gespeicherten Run fortsetzen oder aufgeben.');return}const cls=SC.classes[APP.cls];d.lastCls=APP.cls;d.lastHeat=APP.heat;
  const tm=treeMods(d);const b=d.build;
  G={cls,ci:APP.cls,heat:APP.heat,floor:1,treeM:tm.m,flags:tm.f,hubM:{hp:4*b.train,dmgPct:2*b.train},attrM:attrMods(d,APP.cls),boons:{},equip:Object.fromEntries(SLOTS.map(x=>[x,null])),inv:[],log:[],kills:0,earned:0,turn:0,over:false,modal:null,levelQ:0,fl:[],
   gold:0,relics:[],rflags:{},newRelics:[],known:{heal:1,res:1},app:{},snaps:{},ghost:d.ghost,danger:false,
@@ -1401,7 +1401,7 @@ function descend(){
  computeFOV();renderTop();render();updatePanel();
 }
 function endTurn(){
- if(G.over)return;if(G.battle){battleAfterPlayer();return}G.turn++;const p=G.p,S=G.S;
+ if(G.over)return;if(G.battle){battleAfterPlayer();return}G.turn++;runAutosave();const p=G.p,S=G.S;
  if(p.poison.length){let t=0;p.poison.forEach(x=>{t+=x.d;x.t--});p.poison=p.poison.filter(x=>x.t>0);p.hp-=t;G.rs.taken+=t;float(p.x,p.y,'-'+t,'#9be15d');if(p.hp<=0){G.rs.cause=G.rs.cause&&G.rs.cause.startsWith('Gift')?G.rs.cause:'Gift';die();if(G.over)return}}
  p.hp=Math.min(S.maxHp,p.hp+(1+S.regen)/10);p.res=Math.min(S.maxRes,p.res+(5+S.resRegen)/10);
  for(const k in p.buffs){if(--p.buffs[k]<=0)delete p.buffs[k]}
@@ -1469,7 +1469,7 @@ function endRun(win){
  if(G.over)return;G.over=true;G.modal='end';jingle(win?'victory':'death');
  const d=scS(),st=d.stats,hm=1+0.25*G.heat;
  const base=G.earned*(1+G.S.metaFind/100)*hm*CUR_MULT;const winB=win?150*hm*CUR_MULT:0;const total=Math.round(base+winB);
- d.cur+=total;st.runs++;st.kills+=G.kills;if(win)st.wins++;
+ runClear();d.cur+=total;st.runs++;st.kills+=G.kills;if(win)st.wins++;
  const reached=G.floor;const unl=[];
  SC.classes.forEach(c=>{if(c.unlock&&st.bestFloor<c.unlock&&reached>=c.unlock)unl.push(`${c.i} Neue Klasse: <b>${c.n}</b>`)});
  st.bestFloor=Math.max(st.bestFloor,reached);
@@ -1516,7 +1516,7 @@ function battleAdvance(dt){const B=G.battle;if(!B||B.phase!=='run'||G.modal||G.o
  if(B.clock>=nx-1e-9){B.clock=nx;const adv=nx-(B.lastEv||0);B.lastEv=nx;const p=G.p,S=G.S;p.hp=Math.min(S.maxHp,p.hp+(1+S.regen)/10*adv);p.res=Math.min(S.maxRes,p.res+(5+S.resRegen)/10*adv);
   if(who==='p')playerTurnStart();else enemyBattleAct(who)}}
 function battleLoop(){const B=G.battle;if(!B||B.raf)return;let last=performance.now();
- const tick=now=>{B.raf=null;if(!G||G.battle!==B||G.over)return;const dt=Math.min(.12,(now-last)/1000)*BSPEED;last=now;battleAdvance(dt);renderTimeline();if(G&&G.battle===B)B.raf=requestAnimationFrame(tick)};
+ const tick=now=>{B.raf=null;if(!G||G.battle!==B||G.over)return;const dt=optsOpen()?0:Math.min(.12,(now-last)/1000)*BSPEED;last=now;if(dt)battleAdvance(dt);renderTimeline();if(G&&G.battle===B)B.raf=requestAnimationFrame(tick)};
  B.raf=requestAnimationFrame(tick)}
 function bAct(el){if(!el||!G.battle)return;(G.battle.fx=G.battle.fx||[]).push([el.id,'act']);el.classList.remove('act');void el.offsetWidth;el.classList.add('act')}
 function bEl(e){const B=G.battle;if(!B)return null;if(e==='p')return $('#bp');return $('#be'+B.en.indexOf(e))}
@@ -1759,9 +1759,9 @@ function renderGameShell(){
  new ResizeObserver(resizeCv).observe($('#cvw'));
  cv.addEventListener('click',onCvClick);mobBind();
 }
-function renderTop(){const t=$('#gtop');if(!t)return;if(G.arena){t.innerHTML=`<span class="fl">🏟️ Arena · gegen ${esc(G.arena.op.name)} (${G.arena.op.rating})</span><span style="flex:1"></span><button class="btn sm" data-a="giveup">Aufgeben</button>`;return}t.innerHTML=`<span class="fl">${SC.icon} ${SC.fw} ${G.floor}/15 · ${G.tier?G.tier.name:''}</span>${G.heat?`<span class="mut">🔥 ${SC.heat} ${G.heat}</span>`:''}<span class="mut" id="earned"></span><span style="flex:1"></span>${sndBtn()}<button class="btn sm" data-a="giveup">Aufgeben</button>`}
+function renderTop(){const t=$('#gtop');if(!t)return;if(G.arena){t.innerHTML=`<span class="fl">🏟️ Arena · gegen ${esc(G.arena.op.name)} (${G.arena.op.rating})</span><span style="flex:1"></span><button class="btn sm" data-a="giveup">Aufgeben</button>`;return}t.innerHTML=`<span class="fl">${SC.icon} ${SC.fw} ${G.floor}/15 · ${G.tier?G.tier.name:''}</span>${G.heat?`<span class="mut">🔥 ${SC.heat} ${G.heat}</span>`:''}<span class="mut" id="earned"></span><span style="flex:1"></span>${optBtn()}<button class="btn sm" data-a="giveup">Aufgeben</button>`}
 let VZ=1;
-function resizeCv(){if(!cv)return;const r=$('#cvw').getBoundingClientRect(),dpr=window.devicePixelRatio||1;VZ=isMob()?Math.max(.5,Math.min(1,Math.min(r.width,r.height*1.15)/(TS*9.5))):1;cv.width=Math.max(1,r.width*dpr);cv.height=Math.max(1,r.height*dpr);render()}
+function resizeCv(){const cw=$('#cvw');if(!cv||!cw||!cv.isConnected)return;const r=cw.getBoundingClientRect(),dpr=window.devicePixelRatio||1;VZ=isMob()?Math.max(.5,Math.min(1,Math.min(r.width,r.height*1.15)/(TS*9.5))):1;cv.width=Math.max(1,r.width*dpr);cv.height=Math.max(1,r.height*dpr);render()}
 function camera(){const dpr=window.devicePixelRatio||1;const W=cv.width/dpr/VZ,H=cv.height/dpr/VZ;let cx=G.p.x*TS+TS/2-W/2,cy=G.p.y*TS+TS/2-H/2;
  const mw=G.w*TS,mh=G.h*TS;cx=mw<W?(mw-W)/2:Math.max(0,Math.min(mw-W,cx));cy=mh<H?(mh-H)/2:Math.max(0,Math.min(mh-H,cy));return {cx,cy,W,H}}
 const EMO='"Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif';
@@ -1936,7 +1936,7 @@ function audInit(){if(AUD.ctx||window.SERVER_MODE)return;const C=window.AudioCon
  sndApply();document.addEventListener('visibilitychange',()=>{if(!AUD.ctx)return;document.hidden?AUD.ctx.suspend():AUD.ctx.resume()});
  AUD.timer=setInterval(audTick,25)}
 function sndApply(){if(!AUD.ctx)return;const t=AUD.ctx.currentTime,m=AUD.set.mute?0:1;
- AUD.mus.gain.setTargetAtTime(AUD.set.mus*.85*m,t,.05);AUD.sfx.gain.setTargetAtTime(AUD.set.sfx*1.1*m,t,.05)}
+ AUD.mus.gain.setTargetAtTime(AUD.set.mus*.85*m*(AUD.set.musOn===false?0:1),t,.05);AUD.sfx.gain.setTargetAtTime(AUD.set.sfx*1.1*m*(AUD.set.sfxOn===false?0:1),t,.05)}
 function audUnlock(){audInit();if(AUD.ctx&&AUD.ctx.state!=='running')AUD.ctx.resume()}
 if(!window.SERVER_MODE){['pointerdown','keydown','touchend'].forEach(ev=>addEventListener(ev,audUnlock,{capture:true,passive:true}))}
 
@@ -2079,11 +2079,101 @@ function showUpdate(v){let b=document.getElementById('updbar');if(!b){b=document
  b.innerHTML=`<span>✨ <b>Neue Version verfügbar!</b>${inRun?' <span class="mut">Beim Neuladen geht der laufende Run verloren.</span>':''}</span><button class="btn sm pri" data-a="updNow">Jetzt neu laden</button><button class="btn sm" data-a="updLater">Später</button>`}
 function updNow(){try{navigator.serviceWorker&&navigator.serviceWorker.getRegistration().then(r=>r&&r.update())}catch(e){}setTimeout(()=>location.reload(),150)}
 if(!window.SERVER_MODE){setTimeout(checkUpdate,15000);setInterval(checkUpdate,5*60*1000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkUpdate()})}
+/* ===== Attributkosten: steigen sanft mit allen gekauften Stufen der Klasse ===== */
+const ATTR_STEP=50; // alle 50 gekauften Attributstufen (pro Klasse, alle Attribute zusammen) kostet jede weitere Stufe 1 mehr
+const attrTotal=(d,ci)=>Object.values((d.attrs||{})[ci]||{}).reduce((x,y)=>x+(+y||0),0);
+const attrPrice=t=>1+Math.floor(t/ATTR_STEP);
+function attrPlan(t,n,cur){let lv=0,cost=0;while(lv<n){const p=attrPrice(t+lv);if(cost+p>cur)break;cost+=p;lv++;if(lv>200000)break}return {lv,cost}}
+
+/* ===== Laufenden Run speichern & fortsetzen ===== */
+const RUN_SKIP={cls:1,tier:1,tex:1,light:1,lc:1,walking:1,path:1,battle:1,arsList:1,arsPicked:1};
+const u8s=a=>{let s='';for(let i=0;i<a.length;i++)s+=String.fromCharCode(a[i]+32);return s};
+const s2u8=s=>{const a=new Uint8Array(s.length);for(let i=0;i<s.length;i++)a[i]=s.charCodeAt(i)-32;return a};
+const runDefs=()=>[...SC.enemies.flat(),...SC.bosses];
+function runSnap(){if(!G||G.over||G.arena||!SC||APP.screen!=='game')return null;const D=runDefs();const o={};
+ for(const k in G){if(RUN_SKIP[k])continue;const v=G[k];if(typeof v==='function')continue;o[k]=v instanceof Uint8Array?{_u8:u8s(v)}:v}
+ o.enemies=(G.enemies||[]).map(e=>{const i=D.indexOf(e.def);return i>=0?Object.assign({},e,{def:{_d:i}}):e});
+ o.log=(G.log||[]).slice(-40);o.fl=[];o._ti=Math.max(0,SC.tiers.indexOf(G.tier));o._v=GAME_VER;o._ts=Date.now();
+ try{return JSON.parse(JSON.stringify(o))}catch(e){return null}}
+let RUNSAVE_T=0;
+function runAutosave(force){if(!G||G.over||G.arena||APP.screen!=='game'||(G.arena&&G.arena.replay))return;const now=Date.now();if(!force&&now-RUNSAVE_T<2500)return;RUNSAVE_T=now;
+ const s=runSnap();if(!s)return;const d=scS();d.run=s;force?saveNow():saveSoon()}
+function runClear(){const d=SC&&scS();if(d&&d.run){delete d.run}}
+function runResume(){const d=scS();const o=d.run;if(!o)return false;try{
+ const D=runDefs();const g=JSON.parse(JSON.stringify(o));
+ for(const k in g){const v=g[k];if(v&&typeof v==='object'&&typeof v._u8==='string')g[k]=s2u8(v._u8)}
+ g.enemies=(g.enemies||[]).map(e=>e.def&&e.def._d!=null?Object.assign(e,{def:D[e.def._d]}):e).filter(e=>e.def);
+ g.cls=SC.classes[g.ci];g.tier=SC.tiers[g._ti]||SC.tiers[0];g.modal=null;g.battle=null;g.walking=false;g.over=false;
+ delete g._ti;delete g._v;delete g._ts;
+ APP.cls=g.ci;APP.heat=g.heat;G=g;APP.screen='game';renderGameShell();G.tex=buildTexture();computeStats();
+ G.p.hp=Math.min(G.p.hp,G.S.maxHp);renderTop();log('▶ Run fortgesetzt.','good');computeFOV();resizeCv();updatePanel();
+ if(G.levelQ>0&&typeof showLevelUp==='function')showLevelUp();return true}catch(e){console.error(e);toast('Gespeicherter Run konnte nicht geladen werden.');return false}}
+function runSaveQuit(){if(!G||G.battle||G.over||G.arena)return;runAutosave(true);closeOpts();G=null;APP.screen='hub';APP.tab='run';renderApp();toast('⏸️ Run gespeichert – im Hub unter „Run“ fortsetzen.')}
+function savedRunHTML(d){const r=d.run;if(!r)return '';const c=SC.classes[r.ci]||{};const ago=Math.max(0,Math.round((Date.now()-(r._ts||0))/60000));
+ return `<div class="card" style="margin-bottom:12px;border-color:var(--acc)"><div class="row" style="justify-content:space-between;gap:10px;flex-wrap:wrap">
+  <div>${pxImg(c.i||'❔',34)} <b>⏸️ Gespeicherter Run</b><div class="mut" style="margin-top:4px">${esc(c.n||'?')} · Stufe ${r.p?r.p.lvl:'?'} · ${SC.fw} ${r.floor}/15 · ${SC.goldI} ${r.gold||0} · gespeichert vor ${ago<1?'weniger als 1':ago} Min.</div>
+  <div class="hint" style="margin-top:4px">Solange dieser Run läuft, gelten Attribute, Skillbaum und Ausbau erst ab dem nächsten Run.</div></div>
+  <div class="row" style="gap:8px"><button class="btn pri" data-a="runResume" style="font-size:16px;padding:10px 20px">▶ Fortsetzen</button><button class="btn" data-a="runAbandon">🏳️ Aufgeben</button></div></div></div>`}
+if(!window.SERVER_MODE){const flush=()=>{if(G&&!G.over&&!G.arena&&APP.screen==='game')runAutosave(true)};
+ document.addEventListener('visibilitychange',()=>{if(document.hidden)flush()});addEventListener('pagehide',flush)}
+
+/* ===== Optionsmenü ===== */
+const OPT={tab:'klang',imp:null};
+const optBtn=()=>`<button class="btn sm" data-a="opts" title="Optionen (O)">⚙️</button>`;
+function viewMode(){try{return localStorage.getItem('rl-view')||'auto'}catch(e){return 'auto'}}
+function optsHTML(){const s=AUD.set,inRun=APP.screen==='game'&&G&&!G.over&&!G.arena;
+ const tabs=[['klang','🔊 Klang'],['steuerung','🎮 Steuerung'],['ansicht','🖥️ Ansicht'],['spielstand','💾 Spielstand']];if(inRun)tabs.push(['run','⏸️ Run']);
+ if(!tabs.some(t=>t[0]===OPT.tab))OPT.tab='klang';
+ const tb=`<div class="tabs" style="margin:8px 0 12px">${tabs.map(([k,n])=>`<button class="tab ${OPT.tab===k?'on':''}" data-a="optTab" data-v="${k}">${n}</button>`).join('')}</div>`;
+ let body='';
+ if(OPT.tab==='klang'){const sl=(k,lab,on)=>`<div class="card" style="margin-bottom:8px"><label style="display:flex;gap:10px;align-items:center"><input type="checkbox" data-snd="${on}" ${s[on]!==false?'checked':''}> <b>${lab} an</b></label>
+   <label style="display:block;margin-top:6px">Lautstärke <span class="num">${Math.round(s[k]*100)}</span>%<input type="range" min="0" max="100" value="${Math.round(s[k]*100)}" data-snd="${k}" style="width:100%"></label></div>`;
+  body=sl('mus','🎵 Musik','musOn')+sl('sfx','💥 Soundeffekte','sfxOn')+`<label style="display:flex;gap:10px;align-items:center;margin:6px 0"><input type="checkbox" data-snd="mute" ${s.mute?'checked':''}> <b>Alles stumm</b> <span class="mut">(Taste N)</span></label>
+   <div class="hint">Am Handy startet der Ton nach dem ersten Antippen.</div>`}
+ if(OPT.tab==='steuerung'){const row=(a,b)=>`<tr><td style="padding:4px 10px 4px 0;white-space:nowrap"><b>${a}</b></td><td style="padding:4px 0">${b}</td></tr>`;
+  body=`<div class="grid2" style="${isMob()?'display:flex;flex-direction:column-reverse;gap:10px':''}"><div class="card"><h3 style="margin-top:0">⌨️ Tastatur & Maus</h3><table>
+   ${row('Bewegen','Pfeiltasten · WASD · Numpad')}${row('Diagonal','Q E Z/Y X · Numpad 7 9 1 3')}${row('Warten','Leertaste · . · Numpad 5')}${row('Treppe benutzen','Enter · >')}
+   ${row('Fähigkeiten','1 · 2 · 3')}${row('Charakter & Inventar','C')}${row('Große Karte','M')}${row('Optionen','O · Esc')}${row('Ton stumm','N')}
+   ${row('Hinlaufen','Feld anklicken')}${row('Item wegwerfen','Rechtsklick auf Item')}${row('Level-up wählen','1 · 2 · 3')}
+   ${row('Kampf','A Angreifen · 1–3 Fähigkeiten · I Items · F Flucht · ←/→ Ziel wechseln')}</table></div>
+   <div class="card"><h3 style="margin-top:0">📱 Handy</h3><table>
+   ${row('Bewegen','Steuerkreuz (gedrückt halten = laufen) · auf der Karte wischen')}${row('Hinlaufen','Feld antippen')}${row('Warten','⏳ in der Mitte des Steuerkreuzes')}
+   ${row('Items','1× tippen = Info · 2× tippen = benutzen/ausrüsten')}${row('Infos','☰ Infos (Werte, Log, Karte)')}${row('Ansicht','unter 🖥️ Ansicht umstellbar')}</table></div></div>`}
+ if(OPT.tab==='ansicht'){const vm=viewMode();const o=(k,n,dsc)=>`<label class="card" style="display:flex;gap:10px;align-items:center;margin-bottom:8px;cursor:pointer"><input type="radio" name="vm" data-view="${k}" ${vm===k?'checked':''}> <div><b>${n}</b><div class="mut">${dsc}</div></div></label>`;
+  body=o('auto','Automatisch','Handy-Ansicht auf Touch-Geräten, sonst PC')+o('mob','Immer Handy-Ansicht','Große Tasten, Steuerkreuz')+o('pc','Immer PC-Ansicht','Seitenleiste, Tastatur')}
+ if(OPT.tab==='spielstand'){const where=FBX.on?(ACC.name?`☁️ Cloud-Konto <b>${esc(ACC.name)}</b>`:'📱 Gast – nur auf diesem Gerät'):(ACC.name?`Konto <b>${esc(ACC.name)}</b>`:'📱 Gast – nur auf diesem Gerät');
+  body=`<div class="card" style="margin-bottom:8px">Gespeichert als: ${where}<div class="mut" style="margin-top:4px">Das Spiel speichert automatisch nach jeder Änderung.</div></div>
+   <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn pri" data-a="optSave">💾 Jetzt speichern</button><button class="btn" data-a="optExport">📤 Spielstand exportieren</button><button class="btn" data-a="optImport">📥 Spielstand importieren</button>${ACC.name?'<button class="btn" data-a="logout">🚪 Abmelden</button>':''}</div>
+   ${OPT.imp?`<div class="card" style="margin-top:10px;border-color:#b3392a"><b>⚠️ Importieren ersetzt deinen aktuellen Spielstand.</b><div class="mut">Datei: ${esc(OPT.imp.name)} · zuletzt gespeichert ${OPT.imp.when}</div><div class="row" style="gap:8px;margin-top:8px"><button class="btn pri" data-a="optImpOk">Ja, ersetzen</button><button class="btn" data-a="optImpNo">Abbrechen</button></div></div>`:''}
+   <div class="hint" style="margin-top:8px">Export = Sicherungsdatei zum Aufheben oder zum Umziehen auf ein anderes Gerät.</div>`}
+ if(OPT.tab==='run'&&inRun){body=`<div class="card" style="margin-bottom:8px"><b>${SC.fw} ${G.floor}/15</b> · Stufe ${G.p.lvl} · ${SC.goldI} ${G.gold}<div class="mut" style="margin-top:4px">Dein Run wird laufend automatisch gesichert. Hier kannst du ihn pausieren und später im Hub fortsetzen.</div></div>
+   <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn pri" data-a="optRunQuit" ${G.battle?'disabled':''}>⏸️ Speichern & ins Hauptmenü</button><button class="btn" data-a="giveup">🏳️ Run aufgeben</button></div>
+   ${G.battle?'<div class="hint" style="margin-top:8px">Während eines Kampfes kann nicht pausiert werden.</div>':''}`}
+ return `<div class="box optbox" style="max-width:min(760px,96vw);width:96vw"><div class="row" style="justify-content:space-between"><h2 style="margin:0">⚙️ Optionen</h2><button class="btn sm" data-a="optClose">✖</button></div>${tb}${body}</div>`}
+function openOpts(tab){audUnlock();if(tab)OPT.tab=tab;let o=document.getElementById('optov');
+ if(!o){o=document.createElement('div');o.id='optov';o.className='ov';o.style.zIndex=150;document.body.appendChild(o);
+  o.addEventListener('input',e=>{const t=e.target,k=t.dataset.snd;if(k){if(k==='mute'||k==='musOn'||k==='sfxOn')AUD.set[k]=t.checked;else{AUD.set[k]=t.value/100;const n=t.parentElement.querySelector('.num');if(n)n.textContent=t.value}sndApply();sndSave();updSndBtn();if(k==='sfx'||k==='sfxOn')sfx('coin');return}
+   if(t.dataset.view){try{localStorage.setItem('rl-view',t.dataset.view)}catch(x){}detectMob()}});
+  o.addEventListener('click',e=>{if(e.target===o)closeOpts()})}
+ o.innerHTML=optsHTML();o.style.display='flex'}
+function closeOpts(){const o=document.getElementById('optov');if(o)o.style.display='none';OPT.imp=null}
+const optsOpen=()=>{const o=document.getElementById('optov');return !!(o&&o.style.display!=='none')};
+function exportSave(){const blob=new Blob([JSON.stringify(SAVE,null,1)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+ const dt=new Date().toISOString().slice(0,10);a.download=`ueberleben-spielstand-${(ACC.name||'gast').replace(/[^\w-]/g,'')}-${dt}.json`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500);toast('📤 Spielstand exportiert')}
+function importSave(){const i=document.createElement('input');i.type='file';i.accept='.json,application/json';i.onchange=()=>{const f=i.files[0];if(!f)return;const r=new FileReader();
+ r.onload=()=>{try{const raw=JSON.parse(r.result);if(!raw||!raw.sc||(!raw.sc.office&&!raw.sc.island))throw 0;OPT.imp={raw,name:f.name,when:raw.ts?new Date(raw.ts).toLocaleString('de-DE'):'unbekannt'};openOpts('spielstand')}catch(e){toast('❌ Keine gültige Spielstand-Datei')}};r.readAsText(f)};i.click()}
+function importApply(){if(!OPT.imp)return;const m=migrate(OPT.imp.raw);SAVE=m;OPT.imp=null;saveNow();closeOpts();G=null;APP.screen=SC?'hub':APP.screen;renderApp();toast('📥 Spielstand importiert')}
+
 const KEYS={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0],w:[0,-1],s:[0,1],a:[-1,0],d:[1,0],q:[-1,-1],e:[1,-1],z:[-1,1],y:[-1,1],x:[1,1],'8':[0,-1],'2':[0,1],'4':[-1,0],'6':[1,0],'7':[-1,-1],'9':[1,-1],'1':[-1,1],'3':[1,1]};
-window.addEventListener('keydown',e=>{if(e.key&&e.key.toLowerCase()==='n'&&!e.ctrlKey&&!e.metaKey&&!/INPUT|TEXTAREA/.test(e.target.tagName)){toggleMute();e.preventDefault();return}});
+window.addEventListener('keydown',e=>{if(/INPUT|TEXTAREA/.test(e.target.tagName))return;const kk=(e.key||'').toLowerCase();
+ if(kk==='o'&&!e.ctrlKey&&!e.metaKey){optsOpen()?closeOpts():openOpts();e.preventDefault();return}
+ if(e.key==='Escape'&&optsOpen()){closeOpts();e.preventDefault();return}
+ if(e.key==='Escape'&&APP.screen==='game'&&G&&!G.modal&&!G.over){openOpts(G.arena?'klang':'run');e.preventDefault();return}
+ if(optsOpen())return;
+ if(e.key&&e.key.toLowerCase()==='n'&&!e.ctrlKey&&!e.metaKey&&!/INPUT|TEXTAREA/.test(e.target.tagName)){toggleMute();e.preventDefault();return}});
 document.addEventListener('click',e=>{if(e.target.closest('.btn,.mbt,.tab,[data-a]'))sfx('click')});
 window.addEventListener('keydown',e=>{
- if(APP.screen!=='game'||!G)return;if(e.target.tagName==='TEXTAREA'||e.target.tagName==='INPUT')return;
+ if(APP.screen!=='game'||!G||optsOpen())return;if(e.target.tagName==='TEXTAREA'||e.target.tagName==='INPUT')return;
  const km=e.key.toLowerCase();if(km==='c'&&!e.ctrlKey&&!e.metaKey&&(!G.modal||G.modal==='char')){toggleChar();e.preventDefault();return}
  if(e.key==='Escape'&&G.modal==='char'){toggleChar();return}if(km==='m'&&!G.battle&&(!G.modal||G.modal==='map')){openBigMap();e.preventDefault();return}
  if(e.key==='Escape'&&G.modal==='map'){closeBigMap();return}
@@ -2127,7 +2217,7 @@ const ACT={
  sell(v){sellItem(+v)},
  closeShop(){closeShop()},
  attrCls(v){APP.cls=+v;renderApp()},
- attrBuy(v){const [k,n]=v.split(':');const d=scS();const amt=n==='max'?d.cur:Math.min(+n,d.cur);if(amt<1)return;const before=ptsTotal(d);const a=(d.attrs[APP.cls]=d.attrs[APP.cls]||{});a[k]=(a[k]||0)+amt;spend(d,amt);const gain=ptsTotal(d)-before;if(gain)toast(`+${gain} Skillpunkt${gain>1?'e':''} 🌟`);saveSoon();const y=window.scrollY;renderApp();window.scrollTo(0,y)},
+ attrBuy(v){const [k,n]=v.split(':');const d=scS();const pl=attrPlan(attrTotal(d,APP.cls),n==='max'?Infinity:+n,d.cur);if(pl.lv<1||(n!=='max'&&pl.lv<+n))return;const before=ptsTotal(d);const a=(d.attrs[APP.cls]=d.attrs[APP.cls]||{});a[k]=(a[k]||0)+pl.lv;spend(d,pl.cost);const gain=ptsTotal(d)-before;if(gain)toast(`+${gain} Skillpunkt${gain>1?'e':''} 🌟`);saveSoon();const y=window.scrollY;renderApp();window.scrollTo(0,y)},
  gsmith(v){goldsmith(v)},
  sockIn(v){socketInto(v)},
  sockClose(){if(G){G.modal=null}$('#ovl').innerHTML=''},
@@ -2158,7 +2248,7 @@ const ACT={
  boon(v){pickBoon(+v)},
  giveup(){if(!G||G.over)return;if(G.arena){confirmBox('Arena-Kampf aufgeben? Das zählt als Niederlage.',()=>arenaResult(false));return}confirmBox('Run aufgeben? Bisher Verdientes bekommst du trotzdem.',()=>{log('Run aufgegeben.','bad');G.rs.cause='Aufgegeben';endRun(false)})},
  toHub(){$('#ovl').innerHTML='';G=null;APP.screen='hub';APP.tab='run';APP.trash=false;renderApp()},
- snd(){openSnd()},updNow(){updNow()},updLater(){const b=document.getElementById('updbar');if(b){UPD.later=b.dataset.v;b.remove()}},sndClose(){closeSnd()},
+ snd(){openOpts('klang')},opts(){openOpts()},optClose(){closeOpts()},optTab(v){OPT.tab=v;OPT.imp=null;openOpts()},optSave(){saveNow();toast('💾 Gespeichert')},optExport(){exportSave()},optImport(){importSave()},optImpOk(){importApply()},optImpNo(){OPT.imp=null;openOpts()},optRunQuit(){runSaveQuit()},runResume(){runResume()},runAbandon(){confirmBox('Gespeicherten Run aufgeben? Bisher Verdientes bekommst du trotzdem.',()=>{if(runResume()){log('Run aufgegeben.','bad');G.rs.cause='Aufgegeben';endRun(false)}})},updNow(){updNow()},updLater(){const b=document.getElementById('updbar');if(b){UPD.later=b.dataset.v;b.remove()}},sndClose(){closeSnd()},
  sideT(){document.body.classList.toggle('sideopen');if(document.body.classList.contains('sideopen'))updatePanel()},
  toHubTree(){$('#ovl').innerHTML='';G=null;APP.screen='hub';APP.tab='tree';APP.trash=false;renderApp()}
 };
