@@ -376,6 +376,11 @@ body.mob{touch-action:manipulation;-webkit-user-select:none;user-select:none;-we
 [data-th="island"] .btn:disabled{opacity:.62!important}
 .lock{opacity:.72!important}.btn:disabled{opacity:.58}
 #updbar{position:fixed;top:calc(8px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:400;display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center;max-width:94vw;padding:8px 12px;background:var(--panel);color:var(--txt);border:3px solid var(--ol);box-shadow:inset 3px 3px 0 var(--hi),inset -3px -3px 0 var(--sh),0 6px 20px #0008;font-size:14px}
+.treesearch{position:absolute;left:10px;top:10px;z-index:3;display:flex;gap:6px;align-items:center;max-width:calc(100% - 80px);flex-wrap:wrap}
+.treesearch input{font:inherit;font-size:14px;padding:7px 10px;width:min(240px,48vw);background:var(--panel);color:var(--txt);border:3px solid var(--ol);box-shadow:inset 2px 2px 0 var(--sh);outline:none}
+.treesearch input:focus{border-color:var(--acc)}
+.treesearch #tqn{font-size:13px;background:var(--panel);padding:3px 6px;border:2px solid var(--ol)}
+.treesearch #tqn:empty{display:none}
 /* ===== Insel: Lesbarkeit ===== */
 [data-th="island"]{--mut:#5f4728}
 [data-th="island"] .mut{color:#5f4728}
@@ -405,7 +410,7 @@ body.mob{touch-action:manipulation;-webkit-user-select:none;user-select:none;-we
 'use strict';
 /* ================= Utils ================= */
 let R=Math.random;
-const GAME_VER='2026.11.10-baum1';
+const GAME_VER='2026.11.10-suche1';
 function seedRng(seed){let a=seed>>>0;R=function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 function unseedRng(){R=Math.random}
 const ri=(a,b)=>a+Math.floor(R()*(b-a+1));
@@ -847,6 +852,7 @@ function confirmBox(text,yes){$('#ovl').innerHTML=`<div class="ov"><div class="b
 const TV={x:0,y:0,z:.5,sel:null,hover:null,ptrs:new Map(),moved:false,last:null,pinch:null,path:null};
 function treeTabHTML(){
  return `<div class="treewrap"><div class="treecv" id="tcvw"><canvas id="tcv"></canvas>
+ <div class="treesearch"><input id="tq" type="search" placeholder="🔍 Suchen, z. B. Dornen" value="${esc(TV.q||'')}" autocomplete="off"><span id="tqn" class="mut"></span><button class="btn sm" data-a="tqPrev" title="Vorheriger Treffer">◀</button><button class="btn sm" data-a="tqNext" title="Nächster Treffer (Enter)">▶</button></div>
  <div class="treebtns"><button class="btn" data-a="tz" data-v="1.25">＋</button><button class="btn" data-a="tz" data-v="0.8">－</button><button class="btn" data-a="tcenter">⌖</button></div></div>
  <div class="treeinfo"><div class="card ninfo" id="ninfo"></div><div class="card"><div class="row" style="justify-content:space-between"><b>Gesamtboni</b><button class="btn sm" data-a="treeReset">Alles verlernen</button></div><div class="sumlist" id="tsum"></div></div>
  <div class="hint">Klicke auf einen Knoten, um ihn (samt kürzestem Pfad) zu lernen. Kosten in 🌟 Skillpunkten: kleiner Knoten ${COST.small}, Juwelensockel ${COST.socket}, Knotenpunkt ${COST.notable}, Schlüsselstein ${COST.key}, ★ Rarität freischalten 5 / 10 / 20 (Episch → Legendär → Mythisch, im Glück-Bereich). Skillpunkte bekommst du für je ${PT_EVERY} ausgegebene ${SC.cur} (Tab 💪 Attribute). Der Baum gilt für alle Klassen. Verlernen ist kostenlos. Ziehen = verschieben, Mausrad = zoomen.</div></div></div>`;
@@ -930,10 +936,14 @@ function drawTree(){
   if(n===TV.sel||n===TV.hover){ctx.beginPath();ctx.arc(n.x,n.y,r+(n.t==='small'?6:12),0,Math.PI*2);ctx.strokeStyle=TP.hi;ctx.lineWidth=2;ctx.stroke()}
   if(n.t==='start'){ctx.font='20px sans-serif';ctx.fillText(SC.icon,n.x,n.y+1)}
   if(n.t==='key'){ctx.font='16px sans-serif';ctx.fillText('◆',n.x,n.y+1)}}
+ if(TV.hits&&TV.hits.length){const t=performance.now()/1000;const pulse=6+3*Math.sin(t*4);ctx.lineWidth=4;
+  for(const id of TV.hits){const n=nodes[id];const r=nodeR(n);ctx.beginPath();ctx.arc(n.x,n.y,r+pulse+4,0,Math.PI*2);ctx.strokeStyle=LT?'#d1007a':'#ff4dd8';ctx.stroke()}
+  if(!TV.raf){TV.raf=requestAnimationFrame(()=>{TV.raf=null;if($('#tcv')&&TV.hits&&TV.hits.length)drawTree()})}}
 }
 
 /* ================= Pixel-Sprites (16x16) ================= */
-const PAL={k:'#1a1020',w:'#f4f4f4',g:'#b8b8c8',G:'#6a6a7a',s:'#f2c28c',S:'#c98a5a',h:'#7a4a24',H:'#3a2414',r:'#e04040',R:'#902030',o:'#f08a30',y:'#f6d040',Y:'#c09020',b:'#4a86e8',B:'#22407a',c:'#5ad8e8',e:'#58c050',E:'#2a7a30',p:'#a868e8',P:'#5a2a8a',n:'#b07438',N:'#5a3418',m:'#f08ab0',l:'#a8f060',x:'#ece0c4',X:'#b8a884'};
+const PAL={k:'#1a1020',w:'#f4f4f4',g:'#b8b8c8',G:'#6a6a7a',s:'#f2c28c',S:'#c98a5a',h:'#7a4a24',H:'#3a2414',r:'#e04040',R:'#902030',o:'#f08a30',y:'#f6d040',Y:'#c09020',b:'#4a86e8',B:'#22407a',c:'#5ad8e8',e:'#58c050',E:'#2a7a30',p:'#a868e8',P:'#5a2a8a',n:'#b07438',N:'#5a3418',m:'#f08ab0',l:'#a8f060',x:'#ece0c4',X:'#b8a884'
+};
 const HUM=["................",".....111111.....","....11111111....","...1111111111...","...1222222221...","...2282222822...","...2222222222...","....22233222....",".....222222.....","....44444444....","...4445555444...","..244455554442..","..244444444442..","....66666666....","....666..666....","...7777..7777..."];
 function ovl(rows,ov){rows=rows.slice();for(const [r,c,str] of ov){const a=rows[r].split('');for(let i=0;i<str.length;i++){if(str[i]!==' '&&c+i<16)a[c+i]=str[i]}rows[r]=a.join('')}return rows}
 function hum(map,ov=[]){return ovl(HUM.map(r=>r.replace(/[1-8]/g,d=>map[d]||'.')),ov)}
@@ -2165,6 +2175,16 @@ function importSave(){const i=document.createElement('input');i.type='file';i.ac
  r.onload=()=>{try{const raw=JSON.parse(r.result);if(!raw||!raw.sc||(!raw.sc.office&&!raw.sc.island))throw 0;OPT.imp={raw,name:f.name,when:raw.ts?new Date(raw.ts).toLocaleString('de-DE'):'unbekannt'};openOpts('spielstand')}catch(e){toast('❌ Keine gültige Spielstand-Datei')}};r.readAsText(f)};i.click()}
 function importApply(){if(!OPT.imp)return;const m=migrate(OPT.imp.raw);SAVE=m;OPT.imp=null;saveNow();closeOpts();G=null;APP.screen=SC?'hub':APP.screen;renderApp();toast('📥 Spielstand importiert')}
 
+
+/* ===== Skillbaum-Suche ===== */
+function nodeSearchText(n){try{return (nodeName(n)+' '+nodeType(n)+' '+nodeLines(n).join(' ')).toLowerCase()}catch(e){return ''}}
+function treeSearch(q){TV.q=q;TV.hits=null;TV.hi=-1;const t=(q||'').trim().toLowerCase();
+ if(t.length>=2){const parts=t.split(/\s+/);TV.hits=TREE.nodes.filter(n=>n.t!=='start'&&parts.every(p=>nodeSearchText(n).includes(p))).map(n=>n.id)}
+ const c=$('#tqn');if(c)c.textContent=TV.hits?`${TV.hits.length} Treffer`:'';drawTree()}
+function treeJump(dir){if(!TV.hits||!TV.hits.length)return;TV.hi=(TV.hi+dir+TV.hits.length)%TV.hits.length;const n=TREE.nodes[TV.hits[TV.hi]];
+ TV.z=Math.max(TV.z,.9);TV.x=-n.x*TV.z;TV.y=-n.y*TV.z;TV.sel=n;updatePathPreview();drawTree();updateNInfo();const c=$('#tqn');if(c)c.textContent=`${TV.hi+1} / ${TV.hits.length}`}
+document.addEventListener('input',e=>{if(e.target&&e.target.id==='tq')treeSearch(e.target.value)});
+document.addEventListener('keydown',e=>{if(e.target&&e.target.id==='tq'){if(e.key==='Enter'){treeJump(e.shiftKey?-1:1);e.preventDefault()}if(e.key==='Escape'){e.target.value='';treeSearch('');e.target.blur()}e.stopPropagation()}},true);
 const KEYS={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0],w:[0,-1],s:[0,1],a:[-1,0],d:[1,0],q:[-1,-1],e:[1,-1],z:[-1,1],y:[-1,1],x:[1,1],'8':[0,-1],'2':[0,1],'4':[-1,0],'6':[1,0],'7':[-1,-1],'9':[1,-1],'1':[-1,1],'3':[1,1]};
 window.addEventListener('keydown',e=>{if(/INPUT|TEXTAREA/.test(e.target.tagName))return;const kk=(e.key||'').toLowerCase();
  if(kk==='o'&&!e.ctrlKey&&!e.metaKey){optsOpen()?closeOpts():openOpts();e.preventDefault();return}
@@ -2198,6 +2218,7 @@ const ACT={
  selCls(v){APP.cls=+v;renderApp()},
  heat(v){APP.heat=+v;renderApp()},
  start(){startRun()},
+ tqNext(){treeJump(1)},tqPrev(){treeJump(-1)},
  tz(v){zoomAt(+v,null)},
  tcenter(){TV.fit();drawTree()},
  treeUn(){treeUnalloc()},
