@@ -405,7 +405,7 @@ body.mob{touch-action:manipulation;-webkit-user-select:none;user-select:none;-we
 'use strict';
 /* ================= Utils ================= */
 let R=Math.random;
-const GAME_VER='2026.11.10-update1';
+const GAME_VER='2026.11.10-balance1';
 function seedRng(seed){let a=seed>>>0;R=function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 function unseedRng(){R=Math.random}
 const ri=(a,b)=>a+Math.floor(R()*(b-a+1));
@@ -554,7 +554,8 @@ function notableMods(s,t,b){switch(s){
  default:return b?{lifesteal:t,dbl:2*t}:(t===3?{dodge:9,dbl:6,vision:1}:{dodge:3*t,dbl:2*t});}}
 const KS=[{f:'berserk',d:'+40% Schaden, aber −20% max. {HP}.'},{f:'critHeal',d:'+5% Krit-Chance. Kritische Treffer heilen 4% max. {HP}.'},{f:'fortress',d:'Rüstung wird verdoppelt, aber Ausweichen ist immer 0.'},{f:'caffeine',d:'Fähigkeiten kosten 40% weniger, aber −30% max. {RES}.'},{f:'lucky',d:'+60% {CUR}, aber −10% Schaden.'},{f:'swift',d:'20% Chance nach deinem Zug: Alle Gegner werfen auf der Zeitleiste um eine halbe Runde zurück.'}];
 const COST={small:1,notable:3,key:5,start:0,socket:2};
-const PT_EVERY=20;
+const PT_EVERY=250;      // ausgegebene Währung pro Skillpunkt
+const CUR_MULT=.25;      // Faktor auf alle verdiente Meta-Währung (Überstunden/Muscheln)
 const ATTR=[{k:'hp',v:8,n:'Max. {HP}',i:'❤️'},{k:'dmgFlat',v:2,n:'Angriff',i:'⚔️'},{k:'crit',v:.5,n:'Krit-Chance (%)',i:'🎯'},{k:'critMulti',v:3,n:'Krit-Schaden (%)',i:'💥'},{k:'armor',v:1,n:'Rüstung',i:'🛡️'},{k:'dodge',v:.25,n:'Ausweichen (%)',i:'💨'},{k:'agi',v:.5,n:'Agilität (%)',i:'🏃'},{k:'parry',v:.25,n:'Parieren (%)',i:'🤺'},{k:'block',v:.25,n:'Blocken (%)',i:'🛡️'},
  {k:'res',v:2,n:'Max. {RES}',i:'⚡'},{k:'regen',v:.5,n:'{HP}-Regeneration',i:'💗'},{k:'resRegen',v:.5,n:'{RES}-Regeneration',i:'🔋'},{k:'abilDmg',v:2,n:'Fähigkeitsschaden (%)',i:'✨'},{k:'lifesteal',v:.1,n:'Lebensraub (%)',i:'🩸'},{k:'dbl',v:.25,n:'Doppelschlag (%)',i:'⚔️'},{k:'metaFind',v:.5,n:'Mehr {CUR} (%)',i:'⏱️'}];
 function attrMods(d,ci){const a=(d.attrs||{})[ci]||{};const m={};ATTR.forEach(x=>{if(a[x.k])m[x.k]=Math.round(a[x.k]*x.v*100)/100});return m}
@@ -658,7 +659,8 @@ const LSK='rl-azubi-insel-v1';
 const DEF_SC=()=>({cur:0,tree:[0],heatMax:0,stats:{runs:0,wins:0,bestFloor:0,kills:0,bestiary:{}},lastCls:0,lastHeat:0,build:{stash:0,vitrine:0,jewel:0,shop:0,train:0},relics:[],jewels:[],jewelsUnid:[],sockets:{},jid:1,startRelics:[],ghost:null,history:[],attrs:{},spent:0,v2:1,arsenal:[],champ:{ci:0,eq:{}},arenaDay:'',arenaCount:0,aidN:1});
 let SAVE={v:1,ts:0,sc:{office:DEF_SC(),island:DEF_SC()}};
 function migrate(s){const d={v:1,ts:s.ts||0,sc:{}};for(const k of ['office','island']){const raw=(s.sc||{})[k]||{};const x=Object.assign(DEF_SC(),raw);x.stats=Object.assign(DEF_SC().stats,x.stats||{});x.build=Object.assign(DEF_SC().build,x.build||{});['relics','jewels','jewelsUnid','startRelics','history'].forEach(k=>{if(!Array.isArray(x[k]))x[k]=[]});if(!x.sockets||typeof x.sockets!=='object')x.sockets={};if(!x.jid)x.jid=1;if(!x.attrs||typeof x.attrs!=='object')x.attrs={};if(!Array.isArray(x.arsenal))x.arsenal=[];if(!x.champ||typeof x.champ!=='object')x.champ={ci:0,eq:{}};if(!x.champ.eq)x.champ.eq={};if(!x.aidN)x.aidN=1;if(!x.spent)x.spent=0;
-  if(raw.tree&&!raw.v2){const OC={small:5,notable:15,key:30,start:0,socket:10};let r=0;x.tree.forEach(id=>{const n=TREE.nodes[id];if(n)r+=OC[n.t]||0});x.cur+=r;x.tree=[0];x.sockets={};x.v2=1;x.migrated=r}if(!Array.isArray(x.tree)||!x.tree.includes(0))x.tree=[0];x.tree=x.tree.filter(i=>Number.isInteger(i)&&i>=0&&i<TREE.nodes.length);d.sc[k]=x}return d}
+  if(raw.tree&&!raw.v2){const OC={small:5,notable:15,key:30,start:0,socket:10};let r=0;x.tree.forEach(id=>{const n=TREE.nodes[id];if(n)r+=OC[n.t]||0});x.cur+=r;x.tree=[0];x.sockets={};x.v2=1;x.migrated=r}if(!Array.isArray(x.tree)||!x.tree.includes(0))x.tree=[0];x.tree=x.tree.filter(i=>Number.isInteger(i)&&i>=0&&i<TREE.nodes.length);if(treeSpent(x)>ptsTotal(x)){x.tree=[0];x.sockets={};x.ptReset=1}
+  if(Array.isArray(x.arsenal)&&x.arsenal.some(i=>i&&i.gs)){x.arsenal=x.arsenal.filter(i=>i&&!i.gs);if(x.champ&&x.champ.eq)for(const sl in x.champ.eq)if(!x.arsenal.some(i=>i.aid===x.champ.eq[sl]))delete x.champ.eq[sl]}d.sc[k]=x}return d}
 try{const raw=localStorage.getItem(LSK);if(raw)SAVE=migrate(JSON.parse(raw))}catch(e){}
 const STORE={mode:'local',ref:null,writing:false,pending:false,timer:null};
 let DB=null,DBSTATE='loading';const ACC={name:null,ref:null};
@@ -787,7 +789,8 @@ function pixelizeNode(root){if(!root||root.nodeType!==1&&root.nodeType!==3)retur
   if(any&&n.parentNode)n.parentNode.replaceChild(fr,n)}}
 let PXOBS=null;
 function startPixelizer(){if(PXOBS||typeof MutationObserver==='undefined')return;pixelizeNode(document.body);PXOBS=new MutationObserver(ms=>{for(const m of ms)m.addedNodes.forEach(n=>pixelizeNode(n))});PXOBS.observe(document.body,{childList:true,subtree:true})}
-function renderApp(){
+function renderApp(){try{if(APP.screen==='hub'&&SC){const d=scS();if(d&&d.ptReset){delete d.ptReset;saveSoon();setTimeout(()=>toast('🌟 Neue Skillpunkt-Regel: Dein Skillbaum wurde zurückgesetzt. Ausgegebene Währung bleibt angerechnet.'),300)}}}catch(e){}
+
  const app=$('#app');
  if(APP.screen==='title')app.innerHTML=titleHTML();
  else if(APP.screen==='hub'){app.innerHTML=hubHTML();if(APP.tab==='tree')initTreeView()}
@@ -1101,7 +1104,7 @@ function eqLines(it){const L=[];if(it.base)Object.keys(it.base).forEach(k=>L.pus
  if(it.sockets){const g=it.gems||[];g.forEach(j=>L.push(`💎 <span style="color:${RTX(j.rar)}">${esc(j.n)}</span>: ${jewelLines(j).join(', ')}`));
   const free=it.sockets>=99?'∞':it.sockets-g.length;if(it.sockets>=99||free>0)L.push(`<span class="mut">◇ Freie Juwelenslots: ${free}</span>`)}
  if(it.mw)L.push(`<span class="gold">✨ ${MW[it.mw].n}:</span> ${MW[it.mw].d}`);
- if(it.gs)L.push('<span class="gold">⚒️ Goldschmied-Werk</span>');return L}
+ if(it.gs)L.push('<span class="gold">⚒️ Goldschmied-Werk</span> <span class="mut">· nur für diesen Run, nicht in die Arena-Truhe</span>');return L}
 
 /* ================= Game ================= */
 const DIRS=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
@@ -1465,7 +1468,7 @@ function die(){if(G.over)return;if(G.arena){arenaResult(false);return}
 function endRun(win){
  if(G.over)return;G.over=true;G.modal='end';jingle(win?'victory':'death');
  const d=scS(),st=d.stats,hm=1+0.25*G.heat;
- const base=G.earned*(1+G.S.metaFind/100)*hm;const winB=win?150*hm:0;const total=Math.round(base+winB);
+ const base=G.earned*(1+G.S.metaFind/100)*hm*CUR_MULT;const winB=win?150*hm*CUR_MULT:0;const total=Math.round(base+winB);
  d.cur+=total;st.runs++;st.kills+=G.kills;if(win)st.wins++;
  const reached=G.floor;const unl=[];
  SC.classes.forEach(c=>{if(c.unlock&&st.bestFloor<c.unlock&&reached>=c.unlock)unl.push(`${c.i} Neue Klasse: <b>${c.n}</b>`)});
@@ -1701,7 +1704,7 @@ async function arenaResult(win){if(!G||G.arenaDone)return;if(G.arena.replay){G.o
    <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn pri" data-a="toArena">Zurück zur Arena</button></div></div></div>`;
   ARENA.list=null;return}
  const me=ARENA.me||{rating:1000,w:0,l:0};const Ra=me.rating||1000,Rb=op.rating||1000;const Ea=1/(1+Math.pow(10,(Rb-Ra)/400));const dA=Math.round(32*((win?1:0)-Ea));
- let reward=win?Math.max(5,Math.round(10+dA)):2;d.cur+=reward;saveNow();
+ let reward=win?Math.max(2,Math.round((10+dA)*CUR_MULT)):1;d.cur+=reward;saveNow();
  $('#ovl').innerHTML=`<div class="ov"><div class="box" style="max-width:520px"><h2>${win?'🏆 Sieg in der Arena!':'💀 Niederlage in der Arena'}</h2>
   <div class="kv"><span>Gegner</span><b>${esc(op.name)} · ${op.icon} ${esc(op.cn)}</b></div><div class="kv"><span>Deine Wertung</span><b>${Ra} → ${Ra+dA} <span class="${dA>=0?'good':'bad'}">(${dA>=0?'+':''}${dA})</span></b></div>
   <div class="kv"><span>Belohnung</span><b class="gold">+${reward} ${SC.curI} ${SC.cur}</b></div><div class="kv"><span>Angriffe heute übrig</span><b>${arenaLeft(d)}</b></div>
@@ -1741,7 +1744,7 @@ function arsenalHTML(d){const a=d.arsenal||[];return `<div class="row" style="ju
  <div class="hint" style="margin:4px 0 8px">Am Ende jedes Runs darfst du <b>1 Item</b> aus Ausrüstung oder Inventar hier hineinlegen. Klick = deinem Champion anlegen.</div>
  <div class="inv cinv" style="grid-template-columns:repeat(auto-fill,minmax(52px,1fr))!important">${a.length?a.map((it,i)=>`<button class="slot ${it.rar?'r'+it.rar:''}" data-a="arsUse" data-v="${it.aid}" data-hov="ars:${i}" style="${Object.values((d.champ||{}).eq||{}).includes(it.aid)?'outline:2px solid var(--gold)':''}">${pxImg(it.i,34)}</button>`).join(''):'<span class="mut">Noch leer.</span>'}</div>`}
 /* --- Run-Ende: 1 Item in die Truhe --- */
-function arsPickHTML(){if(!G||G.arena)return '';const d=scS();G.arsList=[...SLOTS.map(s=>G.equip[s]),...G.inv.filter(x=>x.kind==='eq')].filter(Boolean);
+function arsPickHTML(){if(!G||G.arena)return '';const d=scS();G.arsList=[...SLOTS.map(s=>G.equip[s]),...G.inv.filter(x=>x.kind==='eq')].filter(x=>x&&!x.gs);
  if(G.arsPicked)return `<div class="jw" style="margin-top:10px">🧰 <b>${esc(G.arsPicked)}</b> liegt jetzt in deiner Arena-Truhe.</div>`;
  if(!G.arsList.length)return '';if((d.arsenal||[]).length>=ARS_MAX)return `<div class="jw" style="margin-top:10px">🧰 Arena-Truhe voll (${ARS_MAX}).</div>`;
  return `<div class="jw" style="margin-top:10px">🧰 <b>Arena-Truhe:</b> Wähle 1 Item, das du für die Arena behältst.<div class="row" style="margin-top:6px;gap:4px">${G.arsList.map((it,i)=>`<button class="slot ${it.rar?'r'+it.rar:''}" style="width:46px;height:46px" data-a="arsPick" data-v="${i}" data-hov="arl:${i}">${pxImg(it.i,30)}</button>`).join('')}</div></div>`}
@@ -1824,7 +1827,7 @@ function itemDesc(it,shop){if(!it)return '';
  return `<b style="color:${RTX(it.rar)}">${it.i} ${esc(it.n)}</b> <span class="mut">· ${RARN[it.rar]} · ${SLOTN[it.slot]}${isTwoHand(it)?' (2H)':''}${it.ilvl?' · Item-Level '+it.ilvl:''}</span><br>${eqLines(it).join('<br>')}${!isEq&&cur?`<br><span class="mut">Ersetzt: ${esc(cur.n)} (${modLines(cur.mods).join(', ')||'–'})</span>`:''}${isEq||shop?'':'<br><span class="mut">Klicken zum Ausrüsten</span>'}`}
 function updatePanel(){
  if(G&&G.arena&&G.arena.replay)return;const side=$('#side');if(!side||!G)return;const p=G.p,S=G.S;
- const er=$('#earned');if(er)er.textContent=`${SC.goldI} ${G.gold} · ${SC.curI} ~${Math.round(G.earned*(1+S.metaFind/100)*(1+0.25*G.heat))} · ☠️ ${G.kills}`;
+ const er=$('#earned');if(er)er.textContent=`${SC.goldI} ${G.gold} · ${SC.curI} ~${Math.round(G.earned*(1+S.metaFind/100)*(1+0.25*G.heat)*CUR_MULT)} · ☠️ ${G.kills}`;
  const buffN={wall:'🧱 Schildwall',guard:'🛡️ Schutz',evade:'💨 Ausweichen',venom:'🧪 Gift',rage:'🔥 Wut'};
  const buffs=Object.keys(p.buffs).map(k=>`<span>${buffN[k]} ${p.buffs[k]}</span>`).join('')+(p.poison.length?'<span class="bad">☠ vergiftet</span>':'');
  const on1=onStairs(G.stairs,p.x,p.y),on2=onStairs(G.stairs2,p.x,p.y);
@@ -2142,7 +2145,7 @@ const ACT={
  arenaRefresh(){ARENA.list=null;renderApp();loadArena(true)},
  arsUse(v){const d=scS();const aid=+v;if(APP.arsTrash){confirmBox('Dieses Item endgültig aus der Arena-Truhe löschen?',()=>{d.arsenal=d.arsenal.filter(a=>a.aid!==aid);champLoad(d);saveNow();hideTip();renderApp()});return}champEquip(d,aid);saveSoon();hideTip();renderApp()},
  arsTrash(){APP.arsTrash=!APP.arsTrash;renderApp()},
- arsPick(v){if(!G||G.arsPicked)return;const it=G.arsList[+v];if(!it)return;const d=scS();const c=JSON.parse(JSON.stringify(it));c.unid=false;c.aid=d.aidN++;d.arsenal.push(c);G.arsPicked=it.n;saveNow();hideTip();const el=$('#arspick');if(el)el.innerHTML=arsPickHTML()},
+ arsPick(v){if(!G||G.arsPicked)return;const it=G.arsList[+v];if(!it||it.gs)return;const d=scS();const c=JSON.parse(JSON.stringify(it));c.unid=false;c.aid=d.aidN++;d.arsenal.push(c);G.arsPicked=it.n;saveNow();hideTip();const el=$('#arspick');if(el)el.innerHTML=arsPickHTML()},
  toArena(){$('#ovl').innerHTML='';G=null;APP.screen='hub';APP.tab='arena';ARENA.list=null;renderApp()},
  closeOv(){$('#ovl').innerHTML='';APP.onYes=null},
  okOv(){const f=APP.onYes;$('#ovl').innerHTML='';APP.onYes=null;if(f)f()},

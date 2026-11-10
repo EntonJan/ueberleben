@@ -9,6 +9,7 @@ const db = getFirestore();
 setGlobalOptions({ region: 'europe-west3', maxInstances: 5, memory: '512MiB', timeoutSeconds: 60 });
 
 const LIMIT_PER_DAY = 5;
+const CUR_MULT = 0.25; // muss zu CUR_MULT im Spiel passen
 const MATCH_TTL_MS = 60 * 60 * 1000; // ein Kampf muss innerhalb 1 Stunde abgeschlossen werden
 const today = () => new Date().toLocaleDateString('de-DE', { timeZone: 'Europe/Berlin' });
 const need = (cond, code, msg) => { if (!cond) throw new HttpsError(code, msg); };
@@ -76,7 +77,7 @@ exports.arenaFinish = onCall(async (req) => {
       t.update(opRef, { rating: rb - dA, w: (B.w || 0) + (won ? 0 : 1), l: (B.l || 0) + (won ? 1 : 0), log: [entry, ...(B.log || [])].slice(0, 15) });
     }
     t.update(mRef, { status: 'done', won, dA, nActs: acts.length, finished: Date.now(), check: r });
-    out = { win: won, dA, rating: ra + dA, reward: won ? Math.max(5, 10 + dA) : 2, verified: true };
+    out = { win: won, dA, rating: ra + dA, reward: won ? Math.max(2, Math.round((10 + dA) * CUR_MULT)) : 1, verified: true };
   });
   return out;
 });
